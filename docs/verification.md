@@ -51,6 +51,9 @@ site.
 | Current animation | ✅ additive comet particles visible at default and high zoom |
 | Theme toggle | ✅ one-tap sun/moon button in the desktop and mobile top bars |
 | Chart dock clearance | ✅ canvas shrinks above the dock; voltmeter stays visible |
+| Liquid press | ✅ `is-liquid-pressed` + `.liquid-ripple` appear on pointerdown and clean up after the animation |
+| Glass bottom dock | ✅ computed backdrop-filter `blur(50px) saturate(2) brightness(1.05)` on desktop |
+| Glass phone tab bar | ✅ floating capsule, 24 px radius, `blur(46px) saturate(2)`, sheets share the treatment |
 | Console errors | 0 |
 | Failed network requests | 0 |
 
@@ -68,11 +71,11 @@ site.
 | Suite | Result |
 | --- | --- |
 | Vitest (physics, transients, reasoning, teaching, routing) | 52 / 52 passed |
-| Playwright desktop project | 17 / 17 passed |
+| Playwright desktop project | 18 / 18 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 38 passed, 54 intentionally skipped (viewport-specific) |
+| Total e2e | 39 passed, 57 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

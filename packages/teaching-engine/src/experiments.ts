@@ -294,8 +294,8 @@ const internalResistance = (): CircuitDocument =>
       ['E1', 'pos', 'RV1', 'a'],
       ['RV1', 'b', 'A1', 'a'],
       ['A1', 'b', 'E1', 'neg'],
-      ['E1', 'pos', 'V1', 'a'],
-      ['E1', 'neg', 'V1', 'b'],
+      ['E1', 'pos', 'V1', 'b'],
+      ['E1', 'neg', 'V1', 'a'],
     ],
   );
 

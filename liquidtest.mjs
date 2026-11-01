@@ -1,0 +1,37 @@
+import { chromium, devices } from '@playwright/test';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+await page.getByRole('button', { name: /Experiment library/i }).first().click();
+await page.locator('.compare-card', { hasText: 'Internal resistance' }).first().getByRole('button', { name: 'Open' }).click();
+await page.waitForTimeout(1200);
+await page.screenshot({ path: '/tmp/liquid-dock.png' });
+// ripple on the Realistic tab
+const tab = page.getByRole('tab', { name: 'Realistic' });
+const box = await tab.boundingBox();
+await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+await page.mouse.down();
+await page.waitForTimeout(130);
+console.log('ripples', await page.locator('.liquid-ripple').count());
+await page.screenshot({ path: '/tmp/liquid-ripple.png' });
+await page.mouse.up();
+await page.waitForTimeout(700);
+console.log('ripples after', await page.locator('.liquid-ripple').count());
+// mobile
+const ctx = await browser.newContext({ ...devices['iPhone 13'], browserName: 'chromium' });
+const mp = await ctx.newPage();
+await mp.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
+await mp.waitForTimeout(600);
+await mp.getByRole('button', { name: 'Experiment library' }).first().click();
+await mp.locator('.compare-card', { hasText: 'LDR circuit' }).first().getByRole('button', { name: 'Open' }).click();
+await mp.waitForTimeout(800);
+await mp.screenshot({ path: '/tmp/liquid-mobile.png' });
+const tab2 = mp.locator('.mobile-tab').nth(2);
+const b2 = await tab2.boundingBox();
+await mp.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2);
+await mp.mouse.down();
+await mp.waitForTimeout(120);
+await mp.screenshot({ path: '/tmp/liquid-mobile-ripple.png' });
+await mp.mouse.up();
+await browser.close();

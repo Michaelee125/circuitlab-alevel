@@ -1,0 +1,10 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 3 });
+await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /Experiment library/i }).first().click();
+await page.locator('.compare-card', { hasText: 'Internal resistance' }).first().getByRole('button', { name: 'Open' }).click();
+await page.waitForTimeout(1500);
+await page.screenshot({ path: '/tmp/crop-cell.png', clip: { x: 330, y: 170, width: 230, height: 280 } });
+await browser.close();

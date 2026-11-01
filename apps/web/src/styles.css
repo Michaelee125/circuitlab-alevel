@@ -1634,10 +1634,14 @@ textarea.input {
   border-radius: 26px 26px 0 0;
   border: 0.5px solid var(--line-strong);
   border-bottom: 0;
-  background: rgba(30, 30, 33, 0.86);
-  -webkit-backdrop-filter: blur(44px) saturate(200%);
-  backdrop-filter: blur(44px) saturate(200%);
-  box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.6), var(--inner-light);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 28%, rgba(255, 255, 255, 0) 58%),
+    color-mix(in srgb, var(--bg) 62%, transparent);
+  -webkit-backdrop-filter: blur(48px) saturate(210%) brightness(1.04);
+  backdrop-filter: blur(48px) saturate(210%) brightness(1.04);
+  box-shadow:
+    0 -26px 76px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
   padding-bottom: calc(8px + var(--safe-bottom));
   animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
@@ -1647,13 +1651,24 @@ textarea.input {
   background: rgba(255, 255, 255, 0.9);
 }
 
+.light .sheet {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.72)),
+    color-mix(in srgb, var(--bg) 70%, transparent);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 -24px 60px rgba(20, 40, 70, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
 .sheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 12px 15px;
-  border-bottom: 0.5px solid var(--line);
+  border-bottom: 0.5px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
 }
 
 .sheet-handle {
@@ -1729,30 +1744,61 @@ textarea.input {
 
 .bottom-dock {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  border-radius: 20px;
-  background: rgba(26, 26, 28, 0.72);
-  -webkit-backdrop-filter: blur(40px) saturate(190%);
-  backdrop-filter: blur(40px) saturate(190%);
-  border: 0.5px solid var(--line);
-  box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.55), var(--inner-light);
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0) 75%),
+    color-mix(in srgb, var(--bg) 52%, transparent);
+  -webkit-backdrop-filter: blur(50px) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(50px) saturate(200%) brightness(1.05);
+  border: 0.5px solid color-mix(in srgb, var(--line-strong) 80%, transparent);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45);
   overflow: hidden;
   z-index: 6;
   animation: dock-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.bottom-dock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 70% at 50% -20%, rgba(255, 255, 255, 0.16), transparent 62%);
+  z-index: 0;
+}
+
+.bottom-dock > * {
+  position: relative;
+  z-index: 1;
+}
+
 .light .bottom-dock {
-  background: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.74) 55%, rgba(255, 255, 255, 0.62)),
+    color-mix(in srgb, var(--bg) 70%, transparent);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 30px 70px rgba(24, 50, 84, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.light .bottom-dock::before {
+  background: radial-gradient(120% 70% at 50% -20%, rgba(255, 255, 255, 0.8), transparent 62%);
 }
 
 .bottom-dock-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 11px;
-  border-bottom: 0.5px solid var(--line);
+  padding: 9px 12px;
+  border-bottom: 0.5px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
   min-height: 46px;
 }
 
@@ -1790,6 +1836,161 @@ textarea.input {
 
 .toast svg {
   color: var(--good);
+}
+
+/* ============================================================ liquid ===== */
+
+.btn,
+.segmented-item,
+.mobile-tab,
+.menu-action,
+.palette-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:active:not(:disabled),
+.segmented-item:active,
+.mobile-tab:active,
+.menu-action:active,
+.palette-item:active {
+  transform: scale(0.95);
+  filter: brightness(1.07);
+}
+
+.btn.is-liquid-pressed,
+.segmented-item.is-liquid-pressed,
+.mobile-tab.is-liquid-pressed,
+.menu-action.is-liquid-pressed,
+.palette-item.is-liquid-pressed {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 5px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.light .btn.is-liquid-pressed,
+.light .segmented-item.is-liquid-pressed,
+.light .mobile-tab.is-liquid-pressed,
+.light .menu-action.is-liquid-pressed,
+.light .palette-item.is-liquid-pressed {
+  box-shadow:
+    inset 0 0 0 1px rgba(10, 132, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 5px 16px rgba(30, 60, 100, 0.12) !important;
+}
+
+.segmented-item,
+.mobile-tab,
+.menu-action,
+.palette-item {
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    filter 0.18s ease;
+}
+
+.liquid-ripple {
+  position: absolute;
+  left: var(--rx);
+  top: var(--ry);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.04) 36%,
+    rgba(255, 255, 255, 0.55) 47%,
+    rgba(150, 210, 255, 0.3) 55%,
+    rgba(255, 255, 255, 0) 68%
+  );
+  mix-blend-mode: screen;
+  filter: blur(1.5px);
+  animation: liquid-ripple 0.6s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+}
+
+.is-liquid-pressed::after {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(
+    115deg,
+    transparent 26%,
+    rgba(255, 255, 255, 0.55) 45%,
+    rgba(255, 255, 255, 0.12) 54%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  transform: translateX(-70%);
+  animation: liquid-sheen 0.46s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+.light .is-liquid-pressed::after {
+  background: linear-gradient(
+    115deg,
+    transparent 34%,
+    rgba(255, 255, 255, 0.8) 47%,
+    rgba(255, 255, 255, 0.35) 54%,
+    transparent 66%
+  );
+  mix-blend-mode: normal;
+}
+
+.is-liquid-pressed {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 8px 24px rgba(0, 0, 0, 0.32) !important;
+}
+
+.light .is-liquid-pressed {
+  box-shadow:
+    0 0 0 1px rgba(10, 132, 255, 0.16),
+    0 8px 20px rgba(30, 60, 100, 0.16) !important;
+}
+
+.light .liquid-ripple {
+  background: radial-gradient(
+    circle,
+    rgba(10, 132, 255, 0.45) 0%,
+    rgba(10, 132, 255, 0.2) 40%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  mix-blend-mode: normal;
+}
+
+@keyframes liquid-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 0.95;
+    filter: blur(1px);
+  }
+  40% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0;
+    filter: blur(12px);
+  }
+}
+
+@keyframes liquid-sheen {
+  0% {
+    transform: translateX(-80%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(80%);
+    opacity: 0;
+  }
 }
 
 /* ============================================================== mobile ==== */
@@ -1834,7 +2035,7 @@ textarea.input {
     display: none;
   }
   .app-shell {
-    padding-bottom: calc(58px + var(--safe-bottom));
+    padding-bottom: calc(80px + var(--safe-bottom));
     background: var(--bg);
   }
   .topbar {
@@ -1883,18 +2084,35 @@ textarea.input {
   }
   .mobile-tabbar {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + var(--safe-bottom));
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 2px;
-    padding: 6px 6px calc(6px + var(--safe-bottom));
-    background: color-mix(in srgb, var(--bg) 66%, transparent);
-    -webkit-backdrop-filter: blur(34px) saturate(190%);
-    backdrop-filter: blur(34px) saturate(190%);
-    border-top: 0.5px solid var(--line);
+    padding: 6px 6px;
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.025) 48%, rgba(255, 255, 255, 0) 100%),
+      color-mix(in srgb, var(--bg) 56%, transparent);
+    -webkit-backdrop-filter: blur(46px) saturate(200%) brightness(1.04);
+    backdrop-filter: blur(46px) saturate(200%) brightness(1.04);
+    border: 0.5px solid color-mix(in srgb, var(--line-strong) 80%, transparent);
+    box-shadow:
+      0 22px 55px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    overflow: hidden;
     z-index: 30;
+  }
+  .light .mobile-tabbar {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.68)),
+      color-mix(in srgb, var(--bg) 72%, transparent);
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow:
+      0 22px 50px rgba(20, 40, 70, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
   .mobile-tab {
     display: flex;
@@ -1917,7 +2135,10 @@ textarea.input {
   }
   .mobile-tab.is-active {
     color: var(--accent-bright);
-    background: var(--accent-soft);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+      var(--accent-soft);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   .mobile-topbar .segmented {
     padding: 2px;

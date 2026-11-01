@@ -348,7 +348,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       <div
         ref={hostRef}
         className="canvas-host"
-        style={{ top: compact ? 64 : 0, bottom: dockOpen ? 300 : 0 }}
+        style={{ top: compact ? 64 : 0, bottom: dockOpen ? 346 : 0 }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -478,7 +478,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       )}
 
       {!compact && (
-        <div className="stage-overlay-bottom" style={{ bottom: dockOpen ? 300 : 12 }}>
+        <div className="stage-overlay-bottom" style={{ bottom: dockOpen ? 346 : 12 }}>
           <div className="canvas-hint">
             {experiment
               ? `${experiment.title.en} — ${experiment.subtitle.en}`

@@ -19,9 +19,9 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
 - Unit/physics/reasoning/teaching/routing tests: **52 passed**
-- Desktop e2e: **17 passed** (`desktop-chromium`, includes the smoke test)
+- Desktop e2e: **18 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **38 passed**, 54 intentionally skipped
+- Total Playwright: **39 passed**, 57 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -61,6 +61,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - The phone top bar was regrouped: brand + mode segmented on the left, spacer, then the language picker and a single glass cluster holding the experiment library, theme toggle and menu, separated by hairlines. The native select is now an Apple-style pill with a custom chevron.
 - Compact value cards (80 × 44, 7.7 px mono) let three cards sit above a phone circuit without overlapping; desktop keeps the larger glass cards.
 - Toasts now sit above the phone tab bar instead of covering it.
+
+## Liquid Glass interaction pass (sixth review)
+
+- Every glass control now answers a press with a liquid-glass reaction: it compresses slightly (0.95 spring), gains an inner rim light, a specular sheen sweeps across it, and a soft light ring blooms from the pointer (installed once in `liquid.ts`, honours reduced motion, never blocks clicks).
+- The desktop chart dock became a floating Liquid Glass panel: layered translucent gradient, 50 px backdrop blur with saturation and brightness lift, inset top highlight, 24 px corners and a deep soft shadow; its header gets its own hairline sheen.
+- On phones the tab bar is now a floating glass capsule (24 px radius, 46 px blur) with an active glass pill, and the bottom sheets (Properties/Explain/Compare/Graph) use the same layered glass with a specular top edge.
+- Fixed the internal-resistance example wiring (voltmeter polarity) so its leads no longer cross the cell, and meter readings now scale into the display so digits stay inside the instrument.
 
 ## Known limitations
 

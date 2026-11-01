@@ -244,6 +244,24 @@ test.describe('CircuitLab desktop', () => {
     await page.keyboard.press('Escape');
   });
 
+  test('gives liquid-glass press feedback and a frosted dock', async ({ page }) => {
+    await loadExperiment(page, 'Internal resistance');
+    const dock = page.locator('.bottom-dock');
+    await expect(dock).toBeVisible();
+    const frost = await dock.evaluate((el) => getComputedStyle(el).backdropFilter);
+    expect(frost).toContain('blur');
+
+    const tab = page.getByRole('tab', { name: 'Measurements' });
+    const box = await tab.boundingBox();
+    if (!box) throw new Error('Measurements tab not visible');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect(tab).toHaveClass(/is-liquid-pressed/);
+    await expect(page.locator('.liquid-ripple')).toHaveCount(1);
+    await page.mouse.up();
+    await expect(page.locator('.liquid-ripple')).toHaveCount(0, { timeout: 2500 });
+  });
+
   test('shows the internal-resistance fit and the RC time constant', async ({ page }) => {
     await loadExperiment(page, 'Internal resistance');
     const dock = page.locator('.bottom-dock');

@@ -25,9 +25,12 @@ circuit — not from keyword matching.
 | ![Voltmeter close-up](docs/images/glass-voltmeter.png) | ![Realistic lamp with power-scaled glow](docs/images/glass-lamp-glow.png) |
 | Apple-style settings menu | 中文界面 |
 | ![Settings popover](docs/images/glass-settings.png) | ![Chinese interface](docs/images/glass-chinese.png) |
-| Phone layout with compact cards | Liquid Glass sheet on a phone |
+| Phone layout with compact cards (floating glass tab bar) | Liquid Glass bottom sheet |
 | --- | --- |
 | ![Phone layout with compact value cards](docs/images/glass-mobile.png) | ![Mobile glass sheet](docs/images/glass-mobile-sheet.png) |
+| Liquid Glass chart dock | Press feedback (specular sheen + ripple) |
+| --- | --- |
+| ![Floating Liquid Glass bottom dock](docs/images/liquid-dock.png) | ![Liquid press feedback](docs/images/liquid-press.png) |
 
 ## Why this is not just an animation
 
@@ -72,6 +75,8 @@ stays at the supply voltage and only the LDR branch current changes.
 | One-tap dark / light theme toggle in the desktop and phone top bars | ✅ |
 | Phone top bar with grouped controls, styled language picker and no clipped toolbars | ✅ |
 | Canvas inset below the floating toolbar; compact V/I/R cards on phones | ✅ |
+| Liquid Glass press: specular sheen, ripple ring and spring scale on every control | ✅ |
+| Floating Liquid Glass bottom dock, phone tab bar and bottom sheets | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |
 | Save/load (IndexedDB), JSON import/export, share link | ✅ |

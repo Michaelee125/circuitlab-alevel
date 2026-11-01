@@ -337,7 +337,7 @@ export class CircuitRenderer {
           text: value,
           style: {
             fontFamily: MONO,
-            fontSize: state.viewMode === 'realistic' ? 11 : 13.5,
+            fontSize: state.viewMode === 'realistic' ? 11 : 11.5,
             fontWeight: '600',
             fill: this.palette.displayText,
           },
