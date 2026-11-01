@@ -248,6 +248,9 @@ function docSignature(doc: CircuitDocument): string {
   }
   for (const wire of doc.wires) {
     signature += `${wire.id}:${wire.from.componentId}.${wire.from.terminalId}>${wire.to.componentId}.${wire.to.terminalId};`;
+    if (wire.route) {
+      signature += `r:${wire.route.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';')};`;
+    }
   }
   return signature;
 }
@@ -501,8 +504,18 @@ export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
   const routes: Record<string, Point[]> = {};
   const placed: Point[][] = [];
   const lanes = [0, 22, -22, 44, -44, 66, -66, 88, -88];
+  const manual = new Map<string, Point[]>();
+  for (const wire of doc.wires) {
+    const route = manualWireRoute(doc, wire);
+    if (route) {
+      routes[wire.id] = route;
+      placed.push(route);
+      manual.set(wire.id, route);
+    }
+  }
 
   for (const wire of doc.wires) {
+    if (manual.has(wire.id)) continue;
     const obstacles: Rect[] = [];
     for (const comp of doc.components) {
       if (comp.id === wire.from.componentId || comp.id === wire.to.componentId) continue;
@@ -579,9 +592,128 @@ export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
   return routes;
 }
 
-/** Full polyline for a wire, including the routing stubs and lane offsets. */
+/** True when every segment of the path is horizontal or vertical. */
+export function isOrthogonalRoute(points: Point[]): boolean {
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (Math.abs(a.x - b.x) > 0.5 && Math.abs(a.y - b.y) > 0.5) return false;
+  }
+  return true;
+}
+
+/** A validated manual route for a wire, or null when it is stale/invalid. */
+export function manualWireRoute(doc: CircuitDocument, wire: Wire): Point[] | null {
+  if (!wire.route || wire.route.length < 2) return null;
+  const ends = wireEndpoints(doc, wire);
+  if (!ends) return null;
+  const points = dedupeCollinear(wire.route.map((point) => ({ x: point.x, y: point.y })));
+  if (points.length < 2) return null;
+  if (!isOrthogonalRoute(points)) return null;
+  const near = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.75 && Math.abs(a.y - b.y) < 0.75;
+  if (!near(points[0], ends.from) || !near(points[points.length - 1], ends.to)) return null;
+  return points;
+}
+
+/** Full polyline for a wire: the manual route when valid, otherwise the auto route. */
 export function wirePolyline(doc: CircuitDocument, wire: Wire): Point[] {
+  const manual = manualWireRoute(doc, wire);
+  if (manual) return manual;
   return getWireRoutes(doc)[wire.id] ?? [];
+}
+
+export interface EditableWireSegment {
+  segmentIndex: number;
+  orientation: 'horizontal' | 'vertical';
+  a: Point;
+  b: Point;
+  mid: Point;
+  movable: boolean;
+  /** A straight wire needs jogs at both ends when it is offset. */
+  needsJog: boolean;
+}
+
+/**
+ * Segments a user can drag. For multi-segment wires only inner segments are
+ * movable (the first/last segments carry the terminal stubs). A straight wire
+ * exposes its single segment and is moved into a parallel lane with jogs.
+ */
+export function wireSegmentsForEditing(doc: CircuitDocument, wire: Wire): EditableWireSegment[] {
+  const points = wirePolyline(doc, wire);
+  if (points.length < 2) return [];
+  const out: EditableWireSegment[] = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i];
+    const b = points[i + 1];
+    const horizontal = Math.abs(a.y - b.y) < 0.5 && Math.abs(a.x - b.x) > 0.5;
+    const vertical = Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) > 0.5;
+    if (!horizontal && !vertical) continue;
+    const movable = points.length === 2 || (i >= 1 && i <= points.length - 3);
+    out.push({
+      segmentIndex: i,
+      orientation: horizontal ? 'horizontal' : 'vertical',
+      a,
+      b,
+      mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+      movable,
+      needsJog: points.length === 2 && movable,
+    });
+  }
+  return out;
+}
+
+/**
+ * Move one draggable segment by `delta` (the perpendicular component is used).
+ * The endpoints stay exactly on the terminals and the result stays orthogonal.
+ */
+export function moveWireSegment(pointsIn: Point[], segmentIndex: number, delta: Point): Point[] | null {
+  if (pointsIn.length < 2) return null;
+  const points = pointsIn.map((point) => ({ ...point }));
+  if (points.length === 2) {
+    const from = points[0];
+    const to = points[1];
+    const horizontal = Math.abs(from.y - to.y) < 0.5;
+    const vertical = Math.abs(from.x - to.x) < 0.5;
+    if (!horizontal && !vertical) return null;
+    const stub = Math.min(22, Math.abs(horizontal ? to.x - from.x : to.y - from.y) / 2);
+    if (stub < 2) return null;
+    if (horizontal) {
+      const dir = Math.sign(to.x - from.x) || 1;
+      const y = from.y + delta.y;
+      return dedupeCollinear([
+        from,
+        { x: from.x + dir * stub, y: from.y },
+        { x: from.x + dir * stub, y },
+        { x: to.x - dir * stub, y },
+        { x: to.x - dir * stub, y: to.y },
+        to,
+      ]);
+    }
+    const dir = Math.sign(to.y - from.y) || 1;
+    const x = from.x + delta.x;
+    return dedupeCollinear([
+      from,
+      { x: from.x, y: from.y + dir * stub },
+      { x, y: from.y + dir * stub },
+      { x, y: to.y - dir * stub },
+      { x: to.x, y: to.y - dir * stub },
+      to,
+    ]);
+  }
+  if (segmentIndex < 1 || segmentIndex > points.length - 3) return null;
+  const a = points[segmentIndex];
+  const b = points[segmentIndex + 1];
+  const horizontal = Math.abs(a.y - b.y) < 0.5;
+  if (horizontal) {
+    const dy = delta.y;
+    points[segmentIndex] = { ...a, y: a.y + dy };
+    points[segmentIndex + 1] = { ...b, y: b.y + dy };
+  } else {
+    const dx = delta.x;
+    points[segmentIndex] = { ...a, x: a.x + dx };
+    points[segmentIndex + 1] = { ...b, x: b.x + dx };
+  }
+  return dedupeCollinear(points);
 }
 
 export function distance(a: Point, b: Point): number {

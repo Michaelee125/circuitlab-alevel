@@ -18,10 +18,10 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **61 passed**
-- Desktop e2e: **17 passed** (`desktop-chromium`, includes the smoke test)
+- Unit/physics/reasoning/teaching/routing tests: **63 passed**
+- Desktop e2e: **18 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **38 passed**, 54 intentionally skipped
+- Total Playwright: **39 passed**, 57 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -93,6 +93,14 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Removed the Exam mode entirely: the mode switcher now offers Explore and Guided only, the exam panel and its question bank were deleted from the teaching engine, and the exam tab/sheet, marking UI, i18n strings and the exam-specific tests are gone.
 - The Explain panel still shows software-authored practice marking points and a model answer; the pin control is now always available.
 - Unit tests are 61 (the four exam-marking tests were removed), Playwright checks 38.
+
+## Manual wire adjustment (eleventh review)
+
+- Wires can now carry an optional manual orthogonal route (`Wire.route`). The renderer, particle animation, hit testing and JSON serialization all use it; the auto router seeds manual routes first so automatic wires avoid them.
+- Selecting a wire shows glass handles on its movable segments (inner segments, or the whole of a straight wire). Dragging a segment reshapes the route perpendicular to itself; a straight wire is moved into a parallel lane with terminal jogs. Endpoints stay exactly on the terminals and every segment stays horizontal/vertical. Routes snap to a 4 px grid and a drag becomes one undo step.
+- A stale or malformed manual route (for example after moving a component) is ignored and the automatic route is used instead.
+- The Properties rail shows a "Selected wire" card with the manual/automatic state, a Reset-route action and Delete.
+- Coverage: unit tests for manual routes, JSON round-trip, invalid-route fallback, stale routes and editable segments; a Playwright test drags a wire, resets it and deletes it.
 
 ## Known limitations
 

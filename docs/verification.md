@@ -43,6 +43,7 @@ site.
 | Live component values | ✅ labelled Values switch in the toolbar (plus settings/help switches), persisted |
 | Value card placement | ✅ 8 candidate positions; refuses any overlap with components, labels, cards or wires |
 | Value card material | ✅ DOM cards with computed `backdrop-filter: blur(20px) saturate(1.9)`; circuit visibly blurs behind them |
+| Manual wire routes | ✅ drag a wire segment or offset a straight wire, endpoints stay attached and orthogonal; reset to automatic; survives JSON round-trip |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |
@@ -75,12 +76,12 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing) | 61 / 61 passed |
-| Playwright desktop project | 17 / 17 passed |
+| Vitest (physics, transients, reasoning, teaching, routing) | 63 / 63 passed |
+| Playwright desktop project | 18 / 18 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 38 passed, 54 intentionally skipped (viewport-specific) |
+| Total e2e | 39 passed, 57 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

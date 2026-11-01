@@ -314,6 +314,22 @@ kbd {
   height: 100%;
 }
 
+.wire-card {
+  padding: 10px 12px 12px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  border: 0.5px solid var(--line);
+  background: var(--glass-thin);
+  box-shadow: var(--inner-light);
+}
+
+.wire-hint {
+  margin: 4px 0 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .value-layer {
   position: absolute;
   inset: 0;

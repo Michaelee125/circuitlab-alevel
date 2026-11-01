@@ -165,6 +165,8 @@ interface CircuitState {
   rotateSelected: () => void;
   select: (id: string | null) => void;
   selectWire: (id: string | null) => void;
+  updateWireRoute: (wireId: string, route: { x: number; y: number }[]) => void;
+  resetWireRoute: (wireId: string) => void;
   setWiringFrom: (endpoint: { componentId: string; terminalId: string } | null) => void;
   setHoverTerminal: (endpoint: { componentId: string; terminalId: string } | null) => void;
   connect: (a: { componentId: string; terminalId: string }, b: { componentId: string; terminalId: string }) => void;
@@ -380,6 +382,34 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       wiringFrom: state.wiringFrom && state.wiringFrom.componentId !== id ? state.wiringFrom : state.wiringFrom,
       highlightIds: [],
     })),
+
+  updateWireRoute: (wireId, route) =>
+    set((state) => ({
+      doc: {
+        ...state.doc,
+        updatedAt: new Date().toISOString(),
+        wires: state.doc.wires.map((wire) => (wire.id === wireId ? { ...wire, route } : wire)),
+      },
+    })),
+
+  resetWireRoute: (wireId) => {
+    const state = get();
+    const wire = state.doc.wires.find((w) => w.id === wireId);
+    if (!wire?.route) return;
+    set({
+      doc: {
+        ...state.doc,
+        updatedAt: new Date().toISOString(),
+        wires: state.doc.wires.map((w) =>
+          w.id === wireId ? { id: w.id, from: w.from, to: w.to } : w,
+        ),
+      },
+      past: [...state.past, state.doc].slice(-60),
+      future: [],
+      refDoc: null,
+      lastChangeKey: null,
+    });
+  },
 
   selectWire: (id) =>
     set({

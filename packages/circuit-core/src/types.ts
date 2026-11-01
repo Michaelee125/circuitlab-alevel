@@ -100,10 +100,17 @@ export interface WireEndpoint {
   terminalId: string;
 }
 
+export interface WireRoutePoint {
+  x: number;
+  y: number;
+}
+
 export interface Wire {
   id: string;
   from: WireEndpoint;
   to: WireEndpoint;
+  /** Optional manual orthogonal route. Ignored when its ends no longer match the terminals. */
+  route?: WireRoutePoint[];
 }
 
 export interface CircuitMeta {

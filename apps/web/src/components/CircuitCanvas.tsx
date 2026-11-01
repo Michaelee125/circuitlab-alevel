@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { componentAt, componentTerminals, getDesignators, terminalAt, wireAt } from '@circuitlab/circuit-core';
+import { componentAt, componentTerminals, getDesignators, moveWireSegment, terminalAt, wireAt, wirePolyline, wireSegmentsForEditing } from '@circuitlab/circuit-core';
 import type { Point } from '@circuitlab/circuit-core';
 import { CircuitRenderer } from '@circuitlab/circuit-renderer';
 import { Button, IconButton, Segmented } from '@circuitlab/ui';
@@ -12,6 +12,16 @@ interface Props {
   dockOpen?: boolean;
 }
 
+function distanceToSegment(p: Point, a: Point, b: Point): number {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const wx = p.x - a.x;
+  const wy = p.y - a.y;
+  const length2 = vx * vx + vy * vy;
+  const t = length2 > 0 ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / length2)) : 0;
+  return Math.hypot(p.x - (a.x + vx * t), p.y - (a.y + vy * t));
+}
+
 export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,6 +29,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const dragRef = useRef<{ id: string; offset: Point; moved: boolean; start: Point } | null>(null);
+  const wireDragRef = useRef<{ id: string; points: Point[]; segmentIndex: number; start: Point; moved: boolean } | null>(null);
   const panRef = useRef<{ start: Point; view: { x: number; y: number } } | null>(null);
   const pinchRef = useRef<{ distance: number; mid: Point } | null>(null);
   const pointersRef = useRef<Map<number, Point>>(new Map());
@@ -189,6 +200,26 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
     const wire = wireAt(doc, world, 12);
     if (wire) {
       state.selectWire(wire.id);
+      const segments = wireSegmentsForEditing(doc, wire).filter((segment) => segment.movable);
+      let nearest: { segmentIndex: number; distance: number } | null = null;
+      for (const segment of segments) {
+        const distance = distanceToSegment(world, segment.a, segment.b);
+        if (!nearest || distance < nearest.distance) {
+          nearest = { segmentIndex: segment.segmentIndex, distance };
+        }
+      }
+      // A drag on a movable segment reshapes the route; a simple tap only
+      // selects the wire.
+      if (nearest && nearest.distance <= 16) {
+        state.beginDrag();
+        wireDragRef.current = {
+          id: wire.id,
+          points: wirePolyline(doc, wire),
+          segmentIndex: nearest.segmentIndex,
+          start: world,
+          moved: false,
+        };
+      }
       return;
     }
     state.select(null);
@@ -219,6 +250,18 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       const drag = dragRef.current;
       if (Math.hypot(world.x - drag.start.x, world.y - drag.start.y) > 3) drag.moved = true;
       useCircuitStore.getState().dragTo(drag.id, world.x - drag.offset.x, world.y - drag.offset.y);
+      return;
+    }
+    if (wireDragRef.current) {
+      const drag = wireDragRef.current;
+      const delta = { x: world.x - drag.start.x, y: world.y - drag.start.y };
+      if (Math.hypot(delta.x, delta.y) > 2) drag.moved = true;
+      if (drag.moved) {
+        // Snap to a fine 4 px grid so routes stay tidy during the drag.
+        const snapped = { x: Math.round(delta.x / 4) * 4, y: Math.round(delta.y / 4) * 4 };
+        const next = moveWireSegment(drag.points, drag.segmentIndex, snapped);
+        if (next) useCircuitStore.getState().updateWireRoute(drag.id, next);
+      }
       return;
     }
     if (panRef.current) {
@@ -273,6 +316,10 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
           }
         }, 90);
       }
+    }
+    if (wireDragRef.current) {
+      useCircuitStore.getState().endDrag();
+      wireDragRef.current = null;
     }
     panRef.current = null;
     const renderer = rendererRef.current;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { componentBounds, getWireRoutes, moveComponent, pathsOverlap, wirePath, wirePolyline } from '@circuitlab/circuit-core';
+import { componentBounds, getWireRoutes, isOrthogonalRoute, manualWireRoute, moveComponent, moveWireSegment, pathsOverlap, parseCircuitJSON, serializeCircuit, wirePath, wirePolyline, wireSegmentsForEditing } from '@circuitlab/circuit-core';
 import { EXPERIMENTS } from '@circuitlab/teaching-engine';
 import { buildDoc } from './helpers';
 
@@ -174,6 +174,71 @@ describe('wire routing', () => {
     expect(maxY).toBeGreaterThan(420);
   });
 
+  it('honours a valid manual route and ignores stale or diagonal ones', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', x: 0, y: 0 },
+        { kind: 'resistor', x: 200, y: 0 },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+    );
+    const wire = doc.wires[0];
+    const auto = wirePolyline(doc, wire);
+    const moved = moveWireSegment(auto, 0, { x: 0, y: 40 });
+    expect(moved).not.toBeNull();
+    expect(isOrthogonalRoute(moved!)).toBe(true);
+    expect(moved![0]).toEqual(auto[0]);
+    expect(moved![moved!.length - 1]).toEqual(auto[auto.length - 1]);
+    const withRoute = { ...doc, wires: doc.wires.map((w) => (w.id === wire.id ? { ...w, route: moved! } : w)) };
+    const routeWire = withRoute.wires.find((w) => w.id === wire.id)!;
+    expect(wirePolyline(withRoute, routeWire)).toEqual(moved);
+    expect(manualWireRoute(withRoute, routeWire)).toEqual(moved);
+
+    // The manual route survives a JSON round-trip.
+    const parsed = parseCircuitJSON(serializeCircuit(withRoute));
+    expect(parsed.ok).toBe(true);
+    expect(parsed.doc?.wires.find((w) => w.id === wire.id)?.route).toEqual(moved);
+
+    // A diagonal route is rejected and the automatic route is used.
+    const diagonal = [auto[0], { x: auto[0].x + 40, y: auto[0].y + 40 }, auto[auto.length - 1]];
+    const bad = { ...withRoute, wires: withRoute.wires.map((w) => (w.id === wire.id ? { ...w, route: diagonal } : w)) };
+    const badWire = bad.wires.find((w) => w.id === wire.id)!;
+    expect(manualWireRoute(bad, badWire)).toBeNull();
+    const autoDoc = { ...bad, wires: bad.wires.map((w) => ({ id: w.id, from: w.from, to: w.to })) };
+    expect(wirePolyline(bad, badWire)).toEqual(wirePolyline(autoDoc, autoDoc.wires.find((w) => w.id === wire.id)!));
+
+    // Moving the component invalidates the stored route (terminals moved).
+    const dragged = moveComponent(withRoute, withRoute.components[1].id, 220, 60);
+    expect(manualWireRoute(dragged, dragged.wires.find((w) => w.id === wire.id)!)).toBeNull();
+  });
+
+  it('exposes movable segments for wire editing', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', x: 0, y: 0 },
+        { kind: 'resistor', x: 200, y: 0 },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+    );
+    const wire = doc.wires[0];
+    const straight = wireSegmentsForEditing(doc, wire);
+    expect(straight.some((segment) => segment.movable)).toBe(true);
+    const auto = wirePolyline(doc, wire);
+    const jogged = moveWireSegment(auto, 0, { x: 0, y: 30 })!;
+    const withRoute = { ...doc, wires: doc.wires.map((w) => (w.id === wire.id ? { ...w, route: jogged } : w)) };
+    const segments = wireSegmentsForEditing(withRoute, wire);
+    expect(segments.length).toBeGreaterThan(2);
+    expect(segments[0].movable).toBe(false);
+    expect(segments[segments.length - 1].movable).toBe(false);
+    expect(segments.some((segment) => segment.movable)).toBe(true);
+  });
+
   it('gives parallel corridors different lanes when they would coincide', () => {
     // Two components sit on the same spot, so their wires to the third
     // component share a corridor. The router must not draw them on top of
@@ -182,7 +247,7 @@ describe('wire routing', () => {
       [
         { kind: 'resistor', x: 0, y: 0 },
         { kind: 'resistor', x: 0, y: 0 },
-        { kind: 'resistor', x: 400, y: 0 },
+        { kind: 'resistor', x: 200, y: 0 },
       ],
       [
         [0, 'a', 2, 'a'],

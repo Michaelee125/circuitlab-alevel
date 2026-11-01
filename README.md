@@ -37,6 +37,9 @@ circuit — not from keyword matching.
 | Reasoning: rheostat + lamp | Rewiring around a dragged component |
 | --- | --- |
 | ![Verified chain for a variable resistor and lamp](docs/images/reasoning-rheostat-lamp.png) | ![Wire detouring around a dragged resistor](docs/images/routing-detour.png) |
+| Manual wire adjustment | |
+| --- | --- |
+| ![A wire dragged into a manual route with handles and reset control](docs/images/manual-wire.png) | |
 
 ## Why this is not just an animation
 
@@ -72,6 +75,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Pinnable Explain panel that stays visible while you edit | ✅ |
 | Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
+| Manual wire adjustment: drag a wire to reshape it, handles on movable segments, reset to automatic | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
 | Live V / I / R cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch | ✅ |
 | Strict card placement: never overlaps components, designators, other cards or wires (hidden if no free spot) | ✅ |

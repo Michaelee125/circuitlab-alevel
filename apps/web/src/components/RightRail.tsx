@@ -223,6 +223,10 @@ function CircuitOverview() {
   const language = useCircuitStore((s) => s.language);
   const select = useCircuitStore((s) => s.select);
   const doc = useCircuitStore((s) => s.doc);
+  const selectedWireId = useCircuitStore((s) => s.selectedWireId);
+  const resetWireRoute = useCircuitStore((s) => s.resetWireRoute);
+  const deleteSelected = useCircuitStore((s) => s.deleteSelected);
+  const selectedWire = selectedWireId ? doc.wires.find((wire) => wire.id === selectedWireId) : undefined;
   const labels = useMemo(() => getDesignators(doc), [doc]);
   const statusKey =
     solution.status === 'ok'
@@ -239,6 +243,27 @@ function CircuitOverview() {
 
   return (
     <>
+      {selectedWire && (
+        <div className="wire-card">
+          <div className="section-label">{t(language, 'wire.selected')}</div>
+          <p className="wire-hint">
+            {t(language, selectedWire.route ? 'wire.hintManual' : 'wire.hint')}
+          </p>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Button
+              size="sm"
+              icon="rotate"
+              onClick={() => resetWireRoute(selectedWire.id)}
+              disabled={!selectedWire.route}
+            >
+              {t(language, 'wire.reset')}
+            </Button>
+            <Button size="sm" variant="danger" icon="trash" onClick={deleteSelected}>
+              {t(language, 'action.delete')}
+            </Button>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
         <Badge tone={solution.ok ? 'good' : 'danger'}>{t(language, statusKey)}</Badge>
         {solution.totalResistance !== null && Number.isFinite(solution.totalResistance) && (

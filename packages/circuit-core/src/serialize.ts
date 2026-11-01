@@ -95,10 +95,22 @@ function sanitizeWire(raw: unknown, componentIds: Set<string>, errors: string[])
     errors.push('Skipped a wire that references a missing component.');
     return null;
   }
+  let route: Wire['route'];
+  if (Array.isArray(input.route)) {
+    const points = input.route
+      .filter((point) => point && typeof point === 'object')
+      .map((point) => {
+        const p = point as Record<string, unknown>;
+        return { x: Number(p.x), y: Number(p.y) };
+      })
+      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (points.length >= 2) route = points;
+  }
   return {
     id: typeof input.id === 'string' && input.id.length > 0 ? input.id : createId('w'),
     from: { componentId: fromComponent, terminalId: fromTerminal },
     to: { componentId: toComponent, terminalId: toTerminal },
+    ...(route ? { route } : {}),
   };
 }
 

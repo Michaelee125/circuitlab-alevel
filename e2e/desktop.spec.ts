@@ -207,6 +207,22 @@ test.describe('CircuitLab desktop', () => {
     await expect(state(page)).toHaveAttribute('data-wires', '5');
   });
 
+  test('lets a wire be dragged and reset to its automatic route', async ({ page }) => {
+    await loadExperiment(page, 'LDR circuit');
+    const onWire = await canvasPoint(page, 270, 260);
+    await page.mouse.click(onWire.x, onWire.y);
+    await expect(state(page)).toHaveAttribute('data-wire-route', 'auto');
+    await page.mouse.move(onWire.x, onWire.y);
+    await page.mouse.down();
+    await page.mouse.move(onWire.x, onWire.y - 40, { steps: 8 });
+    await page.mouse.up();
+    await expect(state(page)).toHaveAttribute('data-wire-route', 'manual');
+    await page.getByRole('button', { name: 'Reset route' }).click();
+    await expect(state(page)).toHaveAttribute('data-wire-route', 'auto');
+    await page.keyboard.press('Delete');
+    await expect(state(page)).toHaveAttribute('data-wires', '5');
+  });
+
   test('shows live component values beside the symbols', async ({ page }) => {
     await loadExperiment(page, 'LDR circuit');
     await expect(state(page)).toHaveAttribute('data-show-values', 'false');

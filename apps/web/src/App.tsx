@@ -100,6 +100,7 @@ function CircuitDiagnostics() {
   const refDoc = useCircuitStore((s) => s.refDoc);
   const view = useCircuitStore((s) => s.view);
   const selectionId = useCircuitStore((s) => s.selectionId);
+  const selectedWireId = useCircuitStore((s) => s.selectedWireId);
   const sheet = useCircuitStore((s) => s.mobileSheet);
   const showValues = useCircuitStore((s) => s.showValues);
   return (
@@ -120,6 +121,8 @@ function CircuitDiagnostics() {
       data-view-y={view.y}
       data-zoom={view.zoom}
       data-selection={selectionId ?? ''}
+      data-selected-wire={selectedWireId ?? ''}
+      data-wire-route={selectedWireId ? (doc.wires.find((w) => w.id === selectedWireId)?.route ? 'manual' : 'auto') : 'none'}
       data-sheet={sheet}
       data-show-values={showValues ? 'true' : 'false'}
     />

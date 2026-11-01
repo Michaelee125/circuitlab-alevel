@@ -5,6 +5,7 @@ import {
   componentTerminals,
   getComponentDef,
   wirePolyline,
+  wireSegmentsForEditing,
 } from '@circuitlab/circuit-core';
 import type {
   CircuitDocument,
@@ -735,6 +736,21 @@ export class CircuitRenderer {
             this.overlay.circle(terminal.x, terminal.y, 9).stroke({ width: 1.4, color: this.palette.select, alpha: 0.7 });
           }
         }
+      }
+    }
+
+    const selectedWire = state.doc.wires.find((wire) => wire.id === state.selectedWireId);
+    if (selectedWire) {
+      const scale = 1 / this.view.zoom;
+      for (const segment of wireSegmentsForEditing(state.doc, selectedWire)) {
+        if (!segment.movable) continue;
+        this.overlay
+          .circle(segment.mid.x, segment.mid.y, 6 * scale)
+          .fill({ color: this.palette.panel, alpha: 0.92 });
+        this.overlay
+          .circle(segment.mid.x, segment.mid.y, 6 * scale)
+          .stroke({ width: 1.4 * scale, color: this.palette.accent, alpha: 0.95 });
+        this.overlay.circle(segment.mid.x, segment.mid.y, 2 * scale).fill({ color: this.palette.accent });
       }
     }
 
