@@ -54,6 +54,8 @@ site.
 | Liquid press | ✅ `is-liquid-pressed` + `.liquid-ripple` appear on pointerdown and clean up after the animation |
 | Wire routing after drag | ✅ every preset is orthogonal and overlap-free; dragged layouts get parallel lanes |
 | Charge animation | ✅ comet trails follow the polyline, clamped at wire ends (no stray chords) |
+| Wires vs components | ✅ presets and dragged layouts never route through another component; a blocking part forces a detour |
+| General reasoning | ✅ rheostat + lamp, parallel rheostat/lamp, internal resistance, switch open/closed, capacitor, EMF + lamp, LDR + lamp, meters |
 | Glass bottom dock | ✅ computed backdrop-filter `blur(50px) saturate(2) brightness(1.05)` on desktop |
 | Glass phone tab bar | ✅ floating capsule, 24 px radius, `blur(46px) saturate(2)`, sheets share the treatment |
 | Console errors | 0 |
@@ -72,7 +74,7 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing) | 54 / 54 passed |
+| Vitest (physics, transients, reasoning, teaching, routing) | 65 / 65 passed |
 | Playwright desktop project | 18 / 18 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |

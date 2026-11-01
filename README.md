@@ -31,6 +31,9 @@ circuit — not from keyword matching.
 | Liquid Glass chart dock | Press feedback (specular sheen + ripple) |
 | --- | --- |
 | ![Floating Liquid Glass bottom dock](docs/images/liquid-dock.png) | ![Liquid press feedback](docs/images/liquid-press.png) |
+| Reasoning: rheostat + lamp | Rewiring around a dragged component |
+| --- | --- |
+| ![Verified chain for a variable resistor and lamp](docs/images/reasoning-rheostat-lamp.png) | ![Wire detouring around a dragged resistor](docs/images/routing-detour.png) |
 
 ## Why this is not just an animation
 
@@ -76,7 +79,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Phone top bar with grouped controls, styled language picker and no clipped toolbars | ✅ |
 | Canvas inset below the floating toolbar; compact V/I/R cards on phones | ✅ |
 | Liquid Glass press: specular sheen, ripple ring and spring scale on every control | ✅ |
-| Smart rewiring after dragging: parallel lanes for coincident wires, component-aware routes | ✅ |
+| Smart rewiring after dragging: parallel lanes, component-aware visibility routing | ✅ |
 | Floating Liquid Glass bottom dock, phone tab bar and bottom sheets | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |

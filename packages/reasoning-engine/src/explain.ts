@@ -805,6 +805,585 @@ function explainSourceChange(
 }
 
 // ---------------------------------------------------------------------------
+// General rule: any single parameter change in any circuit
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a verified causal chain from the solved before/after states.
+ *
+ * Unlike the specialised rules above, this one requires no particular topology:
+ * every directional claim comes from comparing the two solutions, and the
+ * structure of the circuit only shapes the wording. That makes it usable for
+ * rheostat + lamp, sensor + lamp, multi-branch networks, source changes,
+ * switches and capacitors.
+ */
+function explainGeneralChange(
+  ctx: Ctx,
+  changed: ComponentInstance,
+  change: ParamChange,
+  changes: Record<string, QuantityChange>,
+): ExplainResult | null {
+  const beforeComp = componentIn(ctx.before, changed.id);
+  if (!beforeComp) return null;
+  const bSol = ctx.beforeSolution;
+  const aSol = ctx.afterSolution;
+  const source = ctx.sourceAfter;
+  const sourceBefore = ctx.sourceBefore;
+  const changedLabel = label(ctx, changed.id);
+  const sourceLabel = label(ctx, source.id);
+  const isSourceChange = isSourceKind(changed.kind);
+  const isCapacitor = changed.kind === 'capacitor';
+  const isSwitch = changed.kind === 'switch';
+  const isLamp = changed.kind === 'lamp';
+  const isSensor = changed.kind === 'ldr' || changed.kind === 'thermistor';
+  const isDiode = changed.kind === 'diode';
+
+  const emfB = Math.abs(sourceBefore.params.emf ?? 0);
+  const emfA = Math.abs(source.params.emf ?? 0);
+  const rIntB = sourceBefore.params.internalResistance ?? 0;
+  const rIntA = source.params.internalResistance ?? 0;
+  const iB = Math.abs(bSol.components[sourceBefore.id]?.current ?? 0);
+  const iA = Math.abs(aSol.components[source.id]?.current ?? 0);
+  const vtB = Math.abs(bSol.components[sourceBefore.id]?.terminalVoltage ?? emfB);
+  const vtA = Math.abs(aSol.components[source.id]?.terminalVoltage ?? emfA);
+  const rtB = bSol.totalResistance;
+  const rtA = aSol.totalResistance;
+  const finitePair = (a: number | null, b: number | null): boolean =>
+    a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b);
+  const dI = direction(iB, iA, 1e-4);
+  const dVt = direction(vtB, vtA, 1e-4);
+  const dEmf = direction(emfB, emfA, 1e-5);
+  const dRext = finitePair(rtB, rtA) ? direction(rtB as number, rtA as number, 1e-4) : 'unchanged';
+  const openBefore = iB < 1e-9;
+  const openAfter = iA < 1e-9;
+  const observedR = (comp: ComponentInstance, before: boolean): number | null => {
+    if (isSourceKind(comp.kind)) return comp.params.internalResistance ?? 0;
+    if (comp.kind === 'resistor' || comp.kind === 'variable-resistor') return comp.params.resistance ?? 10;
+    if (comp.kind === 'ldr' || comp.kind === 'thermistor') return componentResistance(comp);
+    if (comp.kind === 'switch') return comp.params.closed === false ? Number.POSITIVE_INFINITY : 0;
+    const reading = (before ? bSol : aSol).components[comp.id];
+    const value = reading?.resistance;
+    return value !== null && value !== undefined && Number.isFinite(value) ? value : null;
+  };
+
+  const rB = observedR(beforeComp, true);
+  const rA = observedR(changed, false);
+  const dR = rB !== null && rA !== null ? direction(rB, rA, 1e-5) : 'unchanged';
+  const steps: ReasoningStep[] = [];
+  const push = (
+    id: string,
+    kind: ReasoningStep['kind'],
+    law: ReasoningStep['law'],
+    en: string,
+    zh: string,
+    highlight: string[] = [changed.id],
+    quantities?: Record<string, QuantityChange>,
+  ) => {
+    steps.push(makeStep(id, kind, law, en, zh, highlight, quantities));
+  };
+
+  // --- cause -----------------------------------------------------------------
+  let causeEn = '';
+  let causeZh = '';
+  let titleEn = 'Circuit response to a parameter change';
+  let titleZh = '电路对参数变化的响应';
+  let ruleId = 'network-change';
+
+  if (change.key === 'illuminance' && isSensor) {
+    const dir = direction(Number(change.before ?? 0), Number(change.after ?? 0), 1e-5);
+    causeEn = `The light intensity on ${changedLabel} ${dir === 'increase' ? 'increases' : 'decreases'}.`;
+    causeZh = `${changedLabel} 受到的光照强度${dir === 'increase' ? '增大' : '减小'}。`;
+    titleEn = `Light change on ${changedLabel}`;
+    titleZh = `${changedLabel} 的光照变化`;
+    ruleId = 'network-sensor-light';
+  } else if (change.key === 'temperatureC' && isSensor) {
+    const dir = direction(Number(change.before ?? 0), Number(change.after ?? 0), 1e-5);
+    causeEn = `The temperature of ${changedLabel} ${dir === 'increase' ? 'rises' : 'falls'}.`;
+    causeZh = `${changedLabel} 的温度${dir === 'increase' ? '升高' : '降低'}。`;
+    titleEn = `Temperature change on ${changedLabel}`;
+    titleZh = `${changedLabel} 的温度变化`;
+    ruleId = 'network-sensor-temperature';
+  } else if (change.key === 'closed' && isSwitch) {
+    const nowOpen = changed.params.closed === false;
+    causeEn = nowOpen ? `The switch ${changedLabel} is opened.` : `The switch ${changedLabel} is closed.`;
+    causeZh = nowOpen ? `开关 ${changedLabel} 被断开。` : `开关 ${changedLabel} 被闭合。`;
+    titleEn = nowOpen ? 'Opening a switch' : 'Closing a switch';
+    titleZh = nowOpen ? '断开开关' : '闭合开关';
+    ruleId = 'network-switch';
+  } else if (isCapacitor) {
+    const cb = Number(beforeComp.params.capacitance ?? 0);
+    const ca = Number(changed.params.capacitance ?? 0);
+    const dir = direction(cb, ca, 1e-6);
+    causeEn = `The capacitance of ${changedLabel} is ${dir === 'increase' ? 'increased' : 'decreased'} from ${fmt(cb * 1e6)} µF to ${fmt(ca * 1e6)} µF.`;
+    causeZh = `${changedLabel} 的电容由 ${fmt(cb * 1e6)} µF ${dir === 'increase' ? '增大' : '减小'}到 ${fmt(ca * 1e6)} µF。`;
+    titleEn = 'Capacitance change (transient)';
+    titleZh = '电容变化（暂态）';
+    ruleId = 'network-capacitance';
+  } else if (change.key === 'emf' && isSourceChange) {
+    causeEn = `The EMF of ${changedLabel} is ${dEmf === 'increase' ? 'increased' : 'decreased'} from ${fmt(emfB)} V to ${fmt(emfA)} V.`;
+    causeZh = `${changedLabel} 的电动势由 ${fmt(emfB)} V ${dEmf === 'increase' ? '增大' : '减小'}到 ${fmt(emfA)} V。`;
+    titleEn = 'Supply EMF change';
+    titleZh = '电源电动势变化';
+    ruleId = 'network-source-emf';
+  } else if (change.key === 'internalResistance' && isSourceChange) {
+    const dir = direction(rIntB, rIntA, 1e-6);
+    causeEn = `The internal resistance of ${changedLabel} is ${dir === 'increase' ? 'increased' : 'decreased'} from ${fmt(rIntB)} Ω to ${fmt(rIntA)} Ω.`;
+    causeZh = `${changedLabel} 的内阻由 ${fmt(rIntB)} Ω ${dir === 'increase' ? '增大' : '减小'}到 ${fmt(rIntA)} Ω。`;
+    titleEn = 'Internal resistance change';
+    titleZh = '电源内阻变化';
+    ruleId = 'network-internal-resistance';
+  } else if (isLamp) {
+    causeEn = `The lamp ${changedLabel} is adjusted; its operating resistance changes from ${rB === null ? '—' : `${fmt(rB)} Ω`} to ${rA === null ? '—' : `${fmt(rA)} Ω`}.`;
+    causeZh = `灯泡 ${changedLabel} 的特性改变，其工作电阻由 ${rB === null ? '—' : `${fmt(rB)} Ω`} 变为 ${rA === null ? '—' : `${fmt(rA)} Ω`}。`;
+    titleEn = `Lamp ${changedLabel} in a circuit`;
+    titleZh = `电路中的灯泡 ${changedLabel}`;
+    ruleId = 'network-lamp';
+  } else if (change.key === 'resistance' || change.key === 'coldResistance' || change.key === 'thermalCoefficient') {
+    if (rB !== null && rA !== null && Number.isFinite(rB) && Number.isFinite(rA)) {
+      causeEn = `The resistance of ${changedLabel} is ${dR === 'increase' ? 'increased' : 'decreased'} from ${fmt(rB)} Ω to ${fmt(rA)} Ω.`;
+      causeZh = `${changedLabel} 的电阻由 ${fmt(rB)} Ω ${dR === 'increase' ? '增大' : '减小'}到 ${fmt(rA)} Ω。`;
+    } else {
+      causeEn = `The resistance setting of ${changedLabel} is changed.`;
+      causeZh = `${changedLabel} 的电阻设置发生变化。`;
+    }
+    titleEn = changed.kind === 'variable-resistor' ? 'Adjusting a variable resistor' : 'Resistance change';
+    titleZh = changed.kind === 'variable-resistor' ? '调节可变电阻' : '电阻变化';
+    ruleId = 'network-resistance';
+  } else if (isDiode) {
+    causeEn = `The characteristics of ${changedLabel} are changed; its effective resistance changes from ${rB === null ? '—' : `${fmt(rB)} Ω`} to ${rA === null ? '—' : `${fmt(rA)} Ω`}.`;
+    causeZh = `${changedLabel} 的特性发生变化，其等效电阻由 ${rB === null ? '—' : `${fmt(rB)} Ω`} 变为 ${rA === null ? '—' : `${fmt(rA)} Ω`}。`;
+    titleEn = `Diode ${changedLabel} in a circuit`;
+    titleZh = `电路中的二极管 ${changedLabel}`;
+    ruleId = 'network-diode';
+  } else {
+    // Any other documented parameter: state the change generically.
+    causeEn = `A parameter of ${changedLabel} is changed${rB !== null && rA !== null ? `, and its resistance changes from ${fmt(rB)} Ω to ${fmt(rA)} Ω` : ''}.`;
+    causeZh = `${changedLabel} 的参数发生变化${rB !== null && rA !== null ? `，其电阻由 ${fmt(rB)} Ω 变为 ${fmt(rA)} Ω` : ''}。`;
+    ruleId = 'network-generic';
+  }
+  push('cause', 'cause', isSensor ? (changed.kind === 'ldr' ? 'ldr-property' : 'thermistor-property') : isSourceChange ? 'internal-resistance' : 'ohms-law', causeEn, causeZh);
+  if (isSensor && rB !== null && rA !== null && dR !== 'unchanged') {
+    push(
+      'resistance',
+      'change',
+      changed.kind === 'ldr' ? 'ldr-property' : 'thermistor-property',
+      `The resistance of ${changedLabel} ${RISE_EN[dR]} from ${fmt(rB)} Ω to ${fmt(rA)} Ω.`,
+      `${changedLabel} 的电阻由 ${fmt(rB)} Ω ${RISE_ZH[dR]}到 ${fmt(rA)} Ω。`,
+      [changed.id],
+      { [`R:${changed.id}`]: { before: rB, after: rA, delta: rA - rB, direction: dR, unit: 'Ω' } },
+    );
+  }
+
+  if (isCapacitor) {
+    const rc = ctx.net.components.find((c) => c.kind === 'resistor' || c.kind === 'variable-resistor' || c.kind === 'lamp');
+    const rValue = rc ? observedR(rc, false) : null;
+    const tauBefore = rValue !== null ? rValue * Number(beforeComp.params.capacitance ?? 0) : null;
+    const tauAfter = rValue !== null ? rValue * Number(changed.params.capacitance ?? 0) : null;
+    const dTau = tauBefore !== null && tauAfter !== null ? direction(tauBefore, tauAfter, 1e-4) : 'unchanged';
+    const unchanged = dI === 'unchanged' && dVt === 'unchanged';
+    push(
+      'time-constant',
+      'consequence',
+      'ohms-law',
+      tauAfter !== null
+        ? `The time constant of the RC network ${dTau === 'unchanged' ? `stays at τ = RC = ${fmt(tauAfter)} s` : `${dTau === 'increase' ? 'rises' : 'falls'} from τ = ${fmt(tauBefore as number)} s to ${fmt(tauAfter)} s`}, so the capacitor charges and discharges ${dTau === 'increase' ? 'more slowly' : dTau === 'decrease' ? 'more quickly' : 'at the same rate'}.`
+        : 'The capacitor changes how quickly the circuit reaches steady state, but not its final steady state.',
+      tauAfter !== null
+        ? `RC 网络的时间常数${dTau === 'unchanged' ? `保持 τ = RC = ${fmt(tauAfter)} s` : `由 τ = ${fmt(tauBefore as number)} s ${DIR_ZH[dTau]}到 ${fmt(tauAfter)} s`}，因此电容充放电${dTau === 'increase' ? '变慢' : dTau === 'decrease' ? '变快' : '快慢不变'}。`
+        : '电容只会改变电路达到稳态的快慢，不会改变最终的稳态。',
+      [changed.id, ...(rc ? [rc.id] : [])],
+    );
+    if (unchanged) {
+      push(
+        'steady-state',
+        'conclusion',
+        'kirchhoff-current',
+        'At steady state a capacitor carries no direct current, so the currents and potential differences in the rest of the circuit are unchanged.',
+        '稳态下电容不通过直流电流，因此电路其余部分的电流和电压保持不变。',
+        [changed.id],
+      );
+    }
+    return {
+      supported: true,
+      ruleId,
+      title: { en: titleEn, zh: titleZh },
+      cause: { en: causeEn, zh: causeZh },
+      steps,
+      markingPoints: buildMarkingPoints([
+        [`The capacitance changes from ${fmt(Number(beforeComp.params.capacitance ?? 0) * 1e6)} µF to ${fmt(Number(changed.params.capacitance ?? 0) * 1e6)} µF.`, `电容由 ${fmt(Number(beforeComp.params.capacitance ?? 0) * 1e6)} µF 变为 ${fmt(Number(changed.params.capacitance ?? 0) * 1e6)} µF。`],
+        ['The time constant τ = RC changes, so the charging time changes.', '时间常数 τ = RC 改变，因此充电时间改变。'],
+        ['At steady state the capacitor is fully charged and no direct current flows, so the final readings are unchanged.', '稳态下电容充满且无直流电流，因此最终读数不变。'],
+      ]),
+      answer: { en: steps.map((s) => s.en).join(' '), zh: steps.map((s) => s.zh).join('') },
+      summary: {
+        en: 'A capacitor only changes the transient behaviour; the steady-state readings stay the same.',
+        zh: '电容只改变暂态过程，稳态读数保持不变。',
+      },
+      changes,
+      highlights: [changed.id, ...(rc ? [rc.id] : [])],
+      markingScheme: 'software-authored',
+    };
+  }
+
+  // --- total resistance and current -----------------------------------------
+  if (isSourceChange && change.key === 'internalResistance') {
+    push(
+      'external-resistance',
+      'law',
+      'ohms-law',
+      finitePair(rtB, rtA)
+        ? `Together with the external circuit, the total resistance ${RISE_EN[direction((rtB as number) + rIntB, (rtA as number) + rIntA, 1e-4)]} from ${fmt((rtB as number) + rIntB)} Ω to ${fmt((rtA as number) + rIntA)} Ω.`
+        : 'The internal resistance changes, so the total resistance of the circuit changes.',
+      finitePair(rtB, rtA)
+        ? `加上外电路后，总电阻由 ${fmt((rtB as number) + rIntB)} Ω ${RISE_ZH[direction((rtB as number) + rIntB, (rtA as number) + rIntA, 1e-4)]}到 ${fmt((rtA as number) + rIntA)} Ω。`
+        : '内阻变化，因此电路总电阻改变。',
+      [source.id],
+    );
+  } else if (!isSourceChange && finitePair(rtB, rtA)) {
+    push(
+      'total-resistance',
+      dRext === 'unchanged' ? 'law' : 'consequence',
+      'series-resistance',
+      dRext === 'unchanged'
+        ? `The total resistance stays at ${fmt(rtA as number)} Ω.`
+        : `The total resistance of the circuit ${RISE_EN[dRext]} from ${fmt(rtB as number)} Ω to ${fmt(rtA as number)} Ω.`,
+      dRext === 'unchanged'
+        ? `总电阻保持 ${fmt(rtA as number)} Ω 不变。`
+        : `电路总电阻由 ${fmt(rtB as number)} Ω ${RISE_ZH[dRext]}到 ${fmt(rtA as number)} Ω。`,
+      [changed.id, source.id],
+      finitePair(rtB, rtA) ? { 'total:R': { before: rtB as number, after: rtA as number, delta: (rtA as number) - (rtB as number), direction: dRext, unit: 'Ω' } } : undefined,
+    );
+  }
+
+  if (openAfter && !openBefore) {
+    push(
+      'current',
+      'consequence',
+      'ohms-law',
+      `The current through ${sourceLabel} falls to zero from ${fmt(iB)} A because the circuit is now open.`,
+      `电路断开，因此通过 ${sourceLabel} 的电流由 ${fmt(iB)} A 减小到零。`,
+      [source.id, changed.id],
+      { 'total:I': { before: iB, after: 0, delta: -iB, direction: 'decrease', unit: 'A' } },
+    );
+  } else if (!openBefore || !openAfter) {
+    let reasonEn = 'because I = EMF / R_total with the EMF constant';
+    let reasonZh = '因为电动势不变，I = E / R总';
+    if (change.key === 'emf') {
+      reasonEn = 'because the EMF is larger';
+      reasonZh = '因为电动势增大';
+    } else if (change.key === 'internalResistance') {
+      reasonEn = 'because the lost volts I·r change';
+      reasonZh = '因为内阻上的损失电压 I·r 改变';
+    }
+    if (dI !== 'unchanged' || openAfter) {
+      push(
+        'current',
+        'consequence',
+        'ohms-law',
+        `The current through ${sourceLabel} ${DIR_EN[dI]} from ${fmt(iB)} A to ${fmt(iA)} A ${reasonEn}.`,
+        `通过 ${sourceLabel} 的电流由 ${fmt(iB)} A ${DIR_ZH[dI]}到 ${fmt(iA)} A，${reasonZh}。`,
+        [source.id],
+        { 'total:I': { before: iB, after: iA, delta: iA - iB, direction: dI, unit: 'A' } },
+      );
+    }
+  }
+
+  if (change.key === 'emf' && finitePair(rtB, rtA) && dRext !== 'unchanged') {
+    push(
+      'operating-point',
+      'consequence',
+      'ohms-law',
+      `The changing current alters the operating temperature (and so the resistance) of the non-ohmic components: the equivalent resistance of the circuit ${RISE_EN[dRext]} from ${fmt(rtB as number)} Ω to ${fmt(rtA as number)} Ω, so the current does not change in proportion to the EMF.`,
+      `电流变化改变了非线性元件的温度（从而改变其电阻），电路等效电阻由 ${fmt(rtB as number)} Ω ${RISE_ZH[dRext]}到 ${fmt(rtA as number)} Ω，因此电流并不与电动势成正比。`,
+      [changed.id, source.id],
+      { 'total:R': { before: rtB as number, after: rtA as number, delta: (rtA as number) - (rtB as number), direction: dRext, unit: 'Ω' } },
+    );
+  }
+
+  // --- terminal p.d. ---------------------------------------------------------
+  if ((rIntA > 1e-9 || rIntB > 1e-9) && dVt !== 'unchanged') {
+    push(
+      'terminal-pd',
+      'consequence',
+      'internal-resistance',
+      `The terminal p.d. of ${sourceLabel} ${DIR_EN[dVt]} from ${fmt(vtB)} V to ${fmt(vtA)} V because V = EMF − I·r (lost volts).`,
+      `${sourceLabel} 的端电压由 ${fmt(vtB)} V ${DIR_ZH[dVt]}到 ${fmt(vtA)} V（U = E − I·r，损失电压改变）。`,
+      [source.id],
+      { [`V:${source.id}`]: { before: vtB, after: vtA, delta: vtA - vtB, direction: dVt, unit: 'V' } },
+    );
+  }
+
+  if (isSwitch) {
+    const swB = bSol.components[changed.id];
+    const swA = aSol.components[changed.id];
+    if (swB && swA) {
+      const vb = Math.abs(swB.voltageMagnitude);
+      const va = Math.abs(swA.voltageMagnitude);
+      if (direction(vb, va, 1e-4) !== 'unchanged') {
+        const open = changed.params.closed === false;
+        push(
+          'switch-pd',
+          'conclusion',
+          'kirchhoff-voltage',
+          open
+            ? `The p.d. across the open switch rises to ${fmt(va)} V, taking the full EMF of the supply.`
+            : `The p.d. across the closed switch falls to ${fmt(va)} V (an ideal closed switch has no p.d.).`,
+          open
+            ? `断开开关两端电压升高到 ${fmt(va)} V，承担全部电源电动势。`
+            : `闭合开关两端电压降为 ${fmt(va)} V（理想闭合开关两端无电压）。`,
+          [changed.id],
+          { [`V:${changed.id}`]: { before: vb, after: va, delta: va - vb, direction: direction(vb, va, 1e-4), unit: 'V' } },
+        );
+      }
+    }
+  }
+
+  // --- changed component p.d. ------------------------------------------------
+  const readingB = bSol.components[changed.id];
+  const readingA = aSol.components[changed.id];
+  if (!isSourceChange && !isSwitch && readingB && readingA && !isCapacitor) {
+    const vB = Math.abs(readingB.voltageMagnitude);
+    const vA = Math.abs(readingA.voltageMagnitude);
+    const dV = direction(vB, vA, 1e-4);
+    if (dV !== 'unchanged') {
+      push(
+        'changed-pd',
+        'consequence',
+        'ohms-law',
+        `The p.d. across ${changedLabel} ${DIR_EN[dV]} from ${fmt(vB)} V to ${fmt(vA)} V because its resistance and the current through it both change.`,
+        `${changedLabel} 两端电压由 ${fmt(vB)} V ${DIR_ZH[dV]}到 ${fmt(vA)} V，因为其电阻和通过它的电流都发生变化。`,
+        [changed.id],
+        { [`V:${changed.id}`]: { before: vB, after: vA, delta: vA - vB, direction: dV, unit: 'V' } },
+      );
+    }
+    if (isLamp) {
+      const pB = Math.abs(readingB.power);
+      const pA = Math.abs(readingA.power);
+      const dP = direction(pB, pA, 1e-4);
+      if (dP !== 'unchanged') {
+        push(
+          'lamp-brightness',
+          'conclusion',
+          'ohms-law',
+          pA < 1e-9
+            ? `The power dissipated by the lamp falls from ${fmt(pB)} W to zero, so the lamp goes out.`
+            : pB < 1e-9
+              ? `The power dissipated by the lamp rises from zero to ${fmt(pA)} W, so the lamp lights up.`
+              : `The power dissipated by the lamp changes from ${fmt(pB)} W to ${fmt(pA)} W (P = VI), so the lamp becomes ${dP === 'increase' ? 'brighter' : 'dimmer'}.`,
+          pA < 1e-9
+            ? `灯泡的功率由 ${fmt(pB)} W 降为零，因此灯泡熄灭。`
+            : pB < 1e-9
+              ? `灯泡的功率由零升高到 ${fmt(pA)} W，因此灯泡亮起。`
+              : `灯泡的功率由 ${fmt(pB)} W 变为 ${fmt(pA)} W（P = UI），因此灯泡变${dP === 'increase' ? '亮' : '暗'}。`,
+          [changed.id],
+          { [`P:${changed.id}`]: { before: pB, after: pA, delta: pA - pB, direction: dP, unit: 'W' } },
+        );
+      }
+    }
+  }
+
+  // --- other components ------------------------------------------------------
+  const unaffected: ComponentInstance[] = [];
+  const others = ctx.net.components.filter(
+    (c) => c.id !== changed.id && !isSourceKind(c.kind),
+  );
+  for (const comp of others) {
+    const beforeOther = componentIn(ctx.before, comp.id);
+    if (!beforeOther) continue;
+    const rb = bSol.components[comp.id];
+    const ra = aSol.components[comp.id];
+    if (!rb || !ra) continue;
+    const vB = Math.abs(rb.voltageMagnitude);
+    const vA = Math.abs(ra.voltageMagnitude);
+    const iBefore = Math.abs(rb.currentMagnitude);
+    const iAfter = Math.abs(ra.currentMagnitude);
+    const dV = direction(vB, vA, 1e-4);
+    const dIC = direction(iBefore, iAfter, 1e-4);
+    if (dV === 'unchanged' && dIC === 'unchanged') {
+      if (vA > 1e-6) unaffected.push(comp);
+      continue;
+    }
+    const compLabel = label(ctx, comp.id);
+    if (isSwitch && vA < 1e-6 && vB > 1e-6) {
+      push(
+        `pd:${comp.id}`,
+        'consequence',
+        'ohms-law',
+        comp.kind === 'lamp'
+          ? `The p.d. across ${compLabel} falls to zero because no current flows, so the lamp goes out.`
+          : `The p.d. across ${compLabel} falls to zero because no current flows.`,
+        comp.kind === 'lamp'
+          ? `${compLabel} 两端电压降为零（无电流），灯泡熄灭。`
+          : `${compLabel} 两端电压降为零（无电流）。`,
+        [comp.id],
+        { [`V:${comp.id}`]: { before: vB, after: vA, delta: vA - vB, direction: 'decrease', unit: 'V' } },
+      );
+      continue;
+    }
+    const rBeforeC = observedR(beforeOther, true);
+    const rAfterC = observedR(comp, false);
+    const rConstant =
+      rBeforeC !== null && rAfterC !== null && (Math.abs(rAfterC - rBeforeC) <= Math.max(1e-6, Math.abs(rBeforeC) * 0.005));
+    if (dIC !== 'unchanged' && rConstant && rAfterC !== null) {
+      push(
+        `pd:${comp.id}`,
+        'consequence',
+        'ohms-law',
+        `The resistance of ${compLabel} stays at ${fmt(rAfterC)} Ω, so the p.d. across it ${DIR_EN[dV]} from ${fmt(vB)} V to ${fmt(vA)} V because V = IR.`,
+        `${compLabel} 的电阻保持 ${fmt(rAfterC)} Ω 不变，由 U = IR 可知其两端电压由 ${fmt(vB)} V ${DIR_ZH[dV]}到 ${fmt(vA)} V。`,
+        [comp.id],
+        { [`V:${comp.id}`]: { before: vB, after: vA, delta: vA - vB, direction: dV, unit: 'V' } },
+      );
+    } else if (dIC !== 'unchanged') {
+      push(
+        `pd:${comp.id}`,
+        'consequence',
+        'ohms-law',
+        `The current through ${compLabel} changes from ${fmt(iBefore)} A to ${fmt(iAfter)} A, and its effective resistance changes${rBeforeC !== null && rAfterC !== null ? ` from ${fmt(rBeforeC)} Ω to ${fmt(rAfterC)} Ω` : ''}, so its p.d. ${DIR_EN[dV]} from ${fmt(vB)} V to ${fmt(vA)} V.`,
+        `通过 ${compLabel} 的电流由 ${fmt(iBefore)} A 变为 ${fmt(iAfter)} A${rBeforeC !== null && rAfterC !== null ? `，其等效电阻由 ${fmt(rBeforeC)} Ω 变为 ${fmt(rAfterC)} Ω` : ''}，因此其两端电压由 ${fmt(vB)} V ${DIR_ZH[dV]}到 ${fmt(vA)} V。`,
+        [comp.id],
+        { [`V:${comp.id}`]: { before: vB, after: vA, delta: vA - vB, direction: dV, unit: 'V' } },
+      );
+    }
+    if (comp.kind === 'lamp') {
+      const pB = Math.abs(rb.power);
+      const pA = Math.abs(ra.power);
+      const dP = direction(pB, pA, 1e-4);
+      if (dP !== 'unchanged') {
+        push(
+          `lamp:${comp.id}`,
+          'conclusion',
+          'ohms-law',
+          pA < 1e-9
+            ? `The power dissipated by ${compLabel} falls to zero, so the lamp goes out.`
+            : pB < 1e-9
+              ? `The power dissipated by ${compLabel} rises from zero, so the lamp lights up.`
+              : `The power dissipated by ${compLabel} changes from ${fmt(pB)} W to ${fmt(pA)} W, so it becomes ${dP === 'increase' ? 'brighter' : 'dimmer'}.`,
+          pA < 1e-9
+            ? `${compLabel} 的功率降为零，因此灯泡熄灭。`
+            : pB < 1e-9
+              ? `${compLabel} 的功率由零升高，因此灯泡亮起。`
+              : `${compLabel} 的功率由 ${fmt(pB)} W 变为 ${fmt(pA)} W，因此变${dP === 'increase' ? '亮' : '暗'}。`,
+          [comp.id],
+          { [`P:${comp.id}`]: { before: pB, after: pA, delta: pA - pB, direction: dP, unit: 'W' } },
+        );
+      }
+    }
+  }
+
+  if (unaffected.length > 0) {
+    const namesEn = unaffected.map((c) => label(ctx, c.id)).join(', ');
+    const namesZh = unaffected.map((c) => label(ctx, c.id)).join('、');
+    push(
+      'unaffected',
+      'conclusion',
+      'parallel-voltage',
+      `The current and p.d. of ${namesEn} stay the same because the terminal p.d. of the supply and their resistances do not change.`,
+      `${namesZh} 的电流和电压保持不变，因为电源端电压和它们的电阻都没有变化。`,
+      unaffected.map((c) => c.id),
+    );
+  }
+
+  // --- meters ----------------------------------------------------------------
+  const meterReadings: string[] = [];
+  const meterReadingsZh: string[] = [];
+  for (const meter of ctx.after.components) {
+    if (meter.kind !== 'ammeter' && meter.kind !== 'voltmeter') continue;
+    const b = bSol.components[meter.id];
+    const a = aSol.components[meter.id];
+    if (!b || !a) continue;
+    if (meter.kind === 'ammeter') {
+      const d = direction(b.currentMagnitude, a.currentMagnitude, 1e-4);
+      if (d !== 'unchanged') {
+        meterReadings.push(`${label(ctx, meter.id)} ${DIR_EN[d]} from ${fmt(b.currentMagnitude)} A to ${fmt(a.currentMagnitude)} A`);
+        meterReadingsZh.push(`${label(ctx, meter.id)} 的读数由 ${fmt(b.currentMagnitude)} A ${DIR_ZH[d]}到 ${fmt(a.currentMagnitude)} A`);
+      }
+    } else {
+      const d = direction(b.voltageMagnitude, a.voltageMagnitude, 1e-4);
+      if (d !== 'unchanged') {
+        meterReadings.push(`${label(ctx, meter.id)} ${DIR_EN[d]} from ${fmt(b.voltageMagnitude)} V to ${fmt(a.voltageMagnitude)} V`);
+        meterReadingsZh.push(`${label(ctx, meter.id)} 的读数由 ${fmt(b.voltageMagnitude)} V ${DIR_ZH[d]}到 ${fmt(a.voltageMagnitude)} V`);
+      }
+    }
+  }
+  if (meterReadings.length > 0) {
+    // Reads better as "X falls from a to b and Y falls from c to d"; the
+    // direction word is derived per meter for the Chinese version.
+    const en = meterReadings.join(meterReadings.length > 1 ? '; ' : '');
+    const zh = meterReadingsZh.join('；');
+    push('meters', 'consequence', 'ohms-law', `${en.charAt(0).toUpperCase()}${en.slice(1)}.`, `${zh}。`, []);
+  }
+
+  if (steps.length <= 1) return null;
+
+  const changedDir = dR !== 'unchanged' ? dR : dI;
+  const affectedLabels = others
+    .filter((c) => {
+      const b = bSol.components[c.id];
+      const a = aSol.components[c.id];
+      return b && a && (direction(Math.abs(b.voltageMagnitude), Math.abs(a.voltageMagnitude), 1e-4) !== 'unchanged');
+    })
+    .map((c) => label(ctx, c.id));
+  const highlights = [changed.id, source.id, ...others.filter((c) => affectedLabels.includes(label(ctx, c.id))).map((c) => c.id)];
+  const lampChanged = [...ctx.net.components, changed].some((c) => c.kind === 'lamp' && (() => {
+    const b = bSol.components[c.id];
+    const a = aSol.components[c.id];
+    return b && a && direction(Math.abs(b.power), Math.abs(a.power), 1e-4) !== 'unchanged';
+  })());
+
+  let summaryEn = 'The circuit responds as described by the steps above.';
+  let summaryZh = '电路的变化如上所述。';
+  if (change.key === 'emf') {
+    summaryEn = `The EMF ${dEmf === 'increase' ? 'increases' : 'decreases'}, so the current ${DIR_EN[dI]} and the p.d. across every component ${DIR_EN[dI]}.`;
+    summaryZh = `电动势${DIR_ZH[dEmf]}，因此电流${DIR_ZH[dI]}，各元件两端电压也都${DIR_ZH[dI]}。`;
+  } else if (change.key === 'internalResistance') {
+    summaryEn = `The internal resistance changes, so the lost volts change: the current ${DIR_EN[dI]} and the terminal p.d. ${DIR_EN[dVt]}.`;
+    summaryZh = `内阻变化导致损失电压改变：电流${DIR_ZH[dI]}，端电压${DIR_ZH[dVt]}。`;
+  } else if (isSwitch) {
+    summaryEn = changed.params.closed === false ? 'The switch is open, so no current flows and the lamps go out.' : 'The switch is closed, so the circuit is complete and current flows again.';
+    summaryZh = changed.params.closed === false ? '开关断开，电路中没有电流，灯泡熄灭。' : '开关闭合，电路接通，重新有电流。';
+  } else if (change.key === 'capacitance') {
+    summaryEn = 'The capacitor only changes the transient behaviour; the steady-state readings stay the same.';
+    summaryZh = '电容只改变暂态过程，稳态读数保持不变。';
+  } else if (changedDir !== 'unchanged') {
+    summaryEn = changedDir === 'increase'
+      ? 'The total resistance rises, so the current falls; the p.d.s across components in series with the change fall, and lamps dim.'
+      : 'The total resistance falls, so the current rises; the p.d.s across components in series with the change rise, and lamps brighten.';
+    summaryZh = changedDir === 'increase'
+      ? '总电阻增大，电流减小；与变化元件串联的元件电压减小，灯泡变暗。'
+      : '总电阻减小，电流增大；与变化元件串联的元件电压增大，灯泡变亮。';
+  }
+
+  return {
+    supported: true,
+    ruleId,
+    title: { en: titleEn, zh: titleZh },
+    cause: { en: causeEn, zh: causeZh },
+    steps,
+    markingPoints: buildMarkingPoints([
+      [causeEn, causeZh],
+      steps.find((s) => s.id === 'resistance')
+        ? [steps.find((s) => s.id === 'resistance')!.en, steps.find((s) => s.id === 'resistance')!.zh]
+        : steps.find((s) => s.id === 'total-resistance')
+          ? [steps.find((s) => s.id === 'total-resistance')!.en, steps.find((s) => s.id === 'total-resistance')!.zh]
+          : ['The total resistance changes.', '总电阻改变。'],
+      steps.find((s) => s.id === 'current') ? [steps.find((s) => s.id === 'current')!.en, steps.find((s) => s.id === 'current')!.zh] : ['The current changes because the total resistance changes.', '总电阻变化，因此电流变化。'],
+      affectedLabels.length > 0
+        ? [`The p.d. across ${affectedLabels[0]} changes because V = IR.`, `${affectedLabels[0]} 两端电压因 U = IR 而变化。`]
+        : ['The readings follow the changed current and p.d.s.', '各读数随电流和电压的变化而变化。'],
+      lampChanged
+        ? ['A lamp becomes brighter when its power increases and dimmer when its power decreases.', '灯泡功率增大时变亮，功率减小时变暗。']
+        : ['Check that the p.d.s still add up to the supply EMF.', '检查各元件电压之和仍等于电源电动势。'],
+    ]),
+    answer: { en: steps.map((s) => s.en).join(' '), zh: steps.map((s) => s.zh).join('') },
+    summary: { en: summaryEn, zh: summaryZh },
+    changes,
+    highlights,
+    markingScheme: 'software-authored',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -866,6 +1445,14 @@ export function explainChange(input: ExplainInput): ExplainResult {
     );
   }
 
+  const sourceCount = input.after.components.filter((c) => isSourceKind(c.kind)).length;
+  if (sourceCount > 1) {
+    return emptyResult(
+      'This build explains circuits with a single supply. With several sources the total EMF and internal resistance would need to be combined first, so no causal chain is given.',
+      '当前版本解释单个电源的电路。多个电源时需要先合并总电动势和内阻，因此这里不生成因果链。',
+      { changes },
+    );
+  }
   const sourceBefore = sourceOf(input.before);
   const sourceAfter = sourceOf(input.after);
   if (!sourceBefore || !sourceAfter) {
@@ -910,6 +1497,8 @@ export function explainChange(input: ExplainInput): ExplainResult {
       break;
   }
 
+  if (result) return result;
+  result = explainGeneralChange(ctx, comp, change, changes);
   if (result) return result;
 
   const friendlyKey: Record<string, string> = {

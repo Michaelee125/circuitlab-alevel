@@ -209,7 +209,7 @@ describe('physics reasoning engine', () => {
     expect(result.answer.en).toContain('current increases');
   });
 
-  it('refuses to invent an explanation when no rule applies', () => {
+  it('explains a sensor change in a longer series chain', () => {
     const make = (ohms: number) =>
       buildDoc(
         [
@@ -233,12 +233,17 @@ describe('physics reasoning engine', () => {
       illuminance: ldrIlluminanceForResistance(2, LDR_PARAMS),
     });
     const result = explainPair(before, after);
-    expect(result.supported).toBe(false);
-    expect(result.steps).toHaveLength(0);
-    expect(result.reason?.en.length).toBeGreaterThan(0);
-    expect(result.reason?.zh.length).toBeGreaterThan(0);
-    // measured values are still reported, but no causal claim is made
-    expect(Object.keys(result.changes).length).toBeGreaterThan(0);
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-sensor-light');
+    const text = result.answer.en;
+    expect(text).toContain('The resistance of LDR1 falls');
+    expect(text).toContain('The current through E1 increases');
+    expect(text).toContain('The resistance of R1 stays at 4.00 Ω, so the p.d. across it increases');
+    expect(text).toContain('The resistance of R2 stays at 8.00 Ω, so the p.d. across it increases');
+    expect(text).toContain('The p.d. across LDR1 decreases');
+    expect(result.steps.length).toBeGreaterThan(4);
+    // every directional claim comes from the solved states
+    expect(result.markingScheme).toBe('software-authored');
   });
 
   it('refuses to explain a structural change', () => {
@@ -277,5 +282,252 @@ describe('physics reasoning engine', () => {
     expect(voltage?.after).toBeCloseTo(8, 6);
     expect(current?.direction).toBe('increase');
     expect(resistance?.direction).toBe('unchanged');
+  });
+});
+
+
+describe('general reasoning coverage', () => {
+  const seriesRheostatLamp = (r: number) =>
+    buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'variable-resistor', params: { resistance: r } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'Rheostat and lamp',
+    );
+
+  it('explains a variable resistor in series with a lamp', () => {
+    const before = seriesRheostatLamp(10);
+    const after = withParam(before, 1, { resistance: 20 });
+    const result = explainPair(before, after);
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-resistance');
+    const text = result.answer.en;
+    expect(text).toContain('The resistance of RV1 is increased');
+    expect(text).toContain('The total resistance of the circuit rises');
+    expect(text).toContain('The current through E1 decreases');
+    expect(text).toContain('The p.d. across RV1 increases');
+    expect(text).toContain('so it becomes dimmer');
+    expect(result.steps.some((s) => s.id.startsWith('lamp:'))).toBe(true);
+    expect(result.markingPoints.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('explains a rheostat in parallel with a lamp without dimming the lamp', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'variable-resistor', params: { resistance: 10 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [0, 'pos', 2, 'a'],
+        [1, 'b', 0, 'neg'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'Rheostat parallel lamp',
+    );
+    const result = explainPair(before, withParam(before, 1, { resistance: 20 }));
+    expect(result.supported).toBe(true);
+    const text = result.answer.en;
+    expect(text).toContain('The current through E1 decreases');
+    expect(text).toContain('stay the same');
+    expect(text).not.toContain('becomes dimmer');
+    expect(text).not.toContain('becomes brighter');
+    expect(result.steps.some((s) => s.id === 'unaffected')).toBe(true);
+  });
+
+  it('explains a change of internal resistance with a lamp load', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6, internalResistance: 0.5 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+      'Internal resistance lamp',
+    );
+    const result = explainPair(before, withParam(before, 0, { internalResistance: 2 }));
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-internal-resistance');
+    const text = result.answer.en;
+    expect(text).toContain('terminal p.d. of E1 decreases');
+    expect(text).toContain('lost volts');
+    expect(text).toContain('so it becomes dimmer');
+  });
+
+  it('explains opening a switch and turning a lamp off', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+        { kind: 'switch', params: { closed: true } },
+      ],
+      [
+        [0, 'pos', 2, 'a'],
+        [2, 'b', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+      'Switch lamp',
+    );
+    const result = explainPair(before, withParam(before, 2, { closed: false }));
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-switch');
+    const text = result.answer.en;
+    expect(text).toContain('The switch S1 is opened');
+    expect(text).toContain('falls to zero');
+    expect(text).toContain('the lamp goes out');
+    expect(text).toContain('p.d. across the open switch rises');
+    expect(text).toContain('6.00 V');
+  });
+
+  it('explains closing a switch as the lamp lighting up', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+        { kind: 'switch', params: { closed: false } },
+      ],
+      [
+        [0, 'pos', 2, 'a'],
+        [2, 'b', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+      'Switch lamp on',
+    );
+    const result = explainPair(before, withParam(before, 2, { closed: true }));
+    expect(result.supported).toBe(true);
+    const text = result.answer.en;
+    expect(text).toContain('The switch S1 is closed');
+    expect(text).toContain('lights up');
+  });
+
+  it('explains a capacitance change as a transient effect only', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'resistor', params: { resistance: 10 } },
+        { kind: 'capacitor', params: { capacitance: 0.00047 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'RC',
+    );
+    const result = explainPair(before, withParam(before, 2, { capacitance: 0.001 }));
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-capacitance');
+    const text = result.answer.en;
+    expect(text).toContain('time constant');
+    expect(text).toContain('more slowly');
+    expect(text).toContain('steady state');
+  });
+
+  it('explains an EMF change with a non-ohmic lamp', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+      'EMF lamp',
+    );
+    const result = explainPair(before, withParam(before, 0, { emf: 12 }));
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-source-emf');
+    const text = result.answer.en;
+    expect(text).toContain('The EMF of E1 is increased');
+    expect(text).toContain('The current through E1 increases');
+    expect(text).toContain('so it becomes brighter');
+    expect(text).not.toContain('total resistance is unchanged');
+  });
+
+  it('explains an LDR feeding a lamp', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'ldr', params: { illuminance: 500, referenceResistance: 100, gamma: 0.7 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'LDR lamp',
+    );
+    const result = explainPair(before, withParam(before, 1, { illuminance: 100 }));
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-sensor-light');
+    const text = result.answer.en;
+    expect(text).toContain('The light intensity on LDR1 decreases');
+    expect(text).toContain('The resistance of LDR1 rises');
+    expect(text).toContain('The current through E1 decreases');
+    expect(text).toContain('so it becomes dimmer');
+  });
+
+  it('includes ammeter and voltmeter readings in the chain', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'variable-resistor', params: { resistance: 10 } },
+        { kind: 'lamp', params: { coldResistance: 2, thermalCoefficient: 0.5 } },
+        { kind: 'ammeter' },
+        { kind: 'voltmeter' },
+      ],
+      [
+        [0, 'pos', 3, 'a'],
+        [3, 'b', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+        [1, 'a', 4, 'a'],
+        [1, 'b', 4, 'b'],
+      ],
+      'Metered rheostat',
+    );
+    const result = explainPair(before, withParam(before, 1, { resistance: 20 }));
+    expect(result.supported).toBe(true);
+    const text = result.answer.en;
+    expect(text).toMatch(/A1 .*decrease/);
+    expect(text).toContain('A');
+    expect(text).toContain('V');
+    const meterStep = result.steps.find((s) => s.id === 'meters');
+    expect(meterStep).toBeTruthy();
+  });
+});
+
+
+describe('reasoning guard rails', () => {
+  it('refuses multiple supplies explicitly instead of inventing a chain', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'cell', params: { emf: 6 } },
+        { kind: 'resistor', params: { resistance: 10 } },
+      ],
+      [
+        [0, 'pos', 1, 'neg'],
+        [1, 'pos', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'Two supplies',
+    );
+    const after = withParam(before, 0, { emf: 9 });
+    const result = explainPair(before, after);
+    expect(result.supported).toBe(false);
+    expect(result.reason?.en).toContain('single supply');
   });
 });

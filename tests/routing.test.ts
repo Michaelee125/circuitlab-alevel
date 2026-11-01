@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getWireRoutes, moveComponent, pathsOverlap, wirePath, wirePolyline } from '@circuitlab/circuit-core';
+import { componentBounds, getWireRoutes, moveComponent, pathsOverlap, wirePath, wirePolyline } from '@circuitlab/circuit-core';
 import { EXPERIMENTS } from '@circuitlab/teaching-engine';
 import { buildDoc } from './helpers';
 
@@ -76,6 +76,66 @@ describe('wire routing', () => {
             `${experiment.id}: wires ${i} and ${j} overlap`,
           ).toBe(false);
         }
+      }
+      // and they must not run through any other component's body
+      for (const wire of doc.wires) {
+        const points = routes[wire.id];
+        for (const comp of doc.components) {
+          if (comp.id === wire.from.componentId || comp.id === wire.to.componentId) continue;
+          const b = componentBounds(comp);
+          const box = { x: b.x + 2, y: b.y + 2, width: b.width - 4, height: b.height - 4 };
+          for (let i = 1; i < points.length; i += 1) {
+            const a = points[i - 1];
+            const p = points[i];
+            const horizontal = Math.abs(a.y - p.y) < 0.5;
+            const crosses = horizontal
+              ? a.y > box.y &&
+                a.y < box.y + box.height &&
+                Math.max(a.x, p.x) > box.x &&
+                Math.min(a.x, p.x) < box.x + box.width
+              : a.x > box.x &&
+                a.x < box.x + box.width &&
+                Math.max(a.y, p.y) > box.y &&
+                Math.min(a.y, p.y) < box.y + box.height;
+            expect(crosses, `${experiment.id}: wire ${wire.id} crosses ${comp.id}`).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
+  it('detours around a component that blocks the direct path', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', x: 0, y: 0 },
+        { kind: 'resistor', x: 600, y: 0 },
+        { kind: 'resistor', x: 300, y: 0 },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+    );
+    const routes = getWireRoutes(doc);
+    const blocker = doc.components[2];
+    const b = componentBounds(blocker);
+    const box = { x: b.x + 2, y: b.y + 2, width: b.width - 4, height: b.height - 4 };
+    for (const wire of doc.wires) {
+      const points = routes[wire.id];
+      for (let i = 1; i < points.length; i += 1) {
+        const a = points[i - 1];
+        const p = points[i];
+        const horizontal = Math.abs(a.y - p.y) < 0.5;
+        const crosses = horizontal
+          ? a.y > box.y &&
+            a.y < box.y + box.height &&
+            Math.max(a.x, p.x) > box.x &&
+            Math.min(a.x, p.x) < box.x + box.width
+          : a.x > box.x &&
+            a.x < box.x + box.width &&
+            Math.max(a.y, p.y) > box.y &&
+            Math.min(a.y, p.y) < box.y + box.height;
+        expect(crosses).toBe(false);
       }
     }
   });

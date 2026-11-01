@@ -18,7 +18,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **54 passed**
+- Unit/physics/reasoning/teaching/routing tests: **65 passed**
 - Desktop e2e: **18 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
 - Total Playwright: **39 passed**, 57 intentionally skipped
@@ -76,6 +76,12 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - The wiring guide is an unmistakable ghost: wide-gap dashes, a soft glow and a ring at the fingertip; it only appears after the pointer has moved away from the terminal.
 - Fixed the stray diagonal lines in the current animation: a comet trail could wrap around the end of a wire and draw a chord across the whole circuit. Trails now clamp at the wire ends and interpolate along the polyline.
 - Added routing regression tests for preset orthogonality/no-overlap and for dragged layouts; unit suite is now 54 tests.
+
+## Routing and reasoning coverage pass (eighth review)
+
+- Wires now avoid component bodies properly. When the chosen corridor would cross another component (common after dragging a part into a wire's path), the router falls back to an A* search over a visibility graph built from component edges: it finds an orthogonal route around every body, penalises running along existing wires, prefers few bends, and falls back to the direct route only when the components physically overlap. All presets and dragged layouts pass new regression tests for orthogonal, component-free, overlap-free routes.
+- Added a general reasoning rule that explains any single parameter change from the numerical before/after solutions: resistance-like changes on any component (rheostat, lamp, diode), sensors, supply EMF, internal resistance, switches and capacitors. It builds cause → resistance / total resistance → current → per-component p.d.s → lamp brightness → meter readings → unaffected parallel branches, and only asserts directions verified by the solver. Specialised rules still take precedence for the classic teaching cases.
+- New regression tests: 65 unit tests (general-network reasoning cases, a multi-supply guard, and component-avoidance routing) and 39 Playwright checks.
 
 ## Known limitations
 

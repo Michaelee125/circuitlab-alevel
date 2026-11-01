@@ -266,6 +266,194 @@ function segmentHitsBox(a: Point, b: Point, box: Rect, pad = 0): boolean {
   return false;
 }
 
+function segmentCrossesBox(a: Point, b: Point, box: Rect): boolean {
+  if (Math.abs(a.y - b.y) < 0.5) {
+    return (
+      a.y > box.y &&
+      a.y < box.y + box.height &&
+      Math.max(a.x, b.x) > box.x &&
+      Math.min(a.x, b.x) < box.x + box.width
+    );
+  }
+  if (Math.abs(a.x - b.x) < 0.5) {
+    return (
+      a.x > box.x &&
+      a.x < box.x + box.width &&
+      Math.max(a.y, b.y) > box.y &&
+      Math.min(a.y, b.y) < box.y + box.height
+    );
+  }
+  return false;
+}
+
+function segmentsOverlap(a: Point, b: Point, c: Point, d: Point, tolerance = 6): boolean {
+  const aH = Math.abs(a.y - b.y) < 0.5;
+  const cH = Math.abs(c.y - d.y) < 0.5;
+  if (aH !== cH) return false;
+  if (aH) {
+    if (Math.abs(a.y - c.y) > tolerance) return false;
+    return Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x)) > Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)) + 6;
+  }
+  if (Math.abs(a.x - c.x) > tolerance) return false;
+  return Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y)) > Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y)) + 6;
+}
+
+/**
+ * Route a wire on a visibility graph of component edges so it goes around
+ * component bodies instead of through them. Returns null when no clean path
+ * exists (e.g. overlapping components); callers then keep the direct route.
+ */
+function routeAroundComponents(
+  doc: CircuitDocument,
+  wire: Wire,
+  from: Point,
+  fromNormal: Point,
+  to: Point,
+  toNormal: Point,
+  placed: Point[][],
+): Point[] | null {
+  const aComp = doc.components.find((c) => c.id === wire.from.componentId);
+  const bComp = doc.components.find((c) => c.id === wire.to.componentId);
+  if (!aComp || !bComp) return null;
+  const stub = 22;
+  const start = { x: from.x + fromNormal.x * stub, y: from.y + fromNormal.y * stub };
+  const end = { x: to.x + toNormal.x * stub, y: to.y + toNormal.y * stub };
+  const boxes: Rect[] = [];
+  for (const comp of doc.components) {
+    const b = componentBounds(comp);
+    const pad = comp.id === wire.from.componentId || comp.id === wire.to.componentId ? 2 : 8;
+    boxes.push({ x: b.x - pad, y: b.y - pad, width: b.width + pad * 2, height: b.height + pad * 2 });
+  }
+  const inside = (p: Point) =>
+    boxes.some((b) => p.x > b.x && p.x < b.x + b.width && p.y > b.y && p.y < b.y + b.height);
+  if (inside(start) || inside(end)) return null;
+
+  const xsSet = new Set<number>([start.x, end.x]);
+  const ysSet = new Set<number>([start.y, end.y]);
+  for (const b of boxes) {
+    xsSet.add(b.x);
+    xsSet.add(b.x + b.width);
+    ysSet.add(b.y);
+    ysSet.add(b.y + b.height);
+  }
+  const xs = [...xsSet].sort((a, b) => a - b);
+  const ys = [...ysSet].sort((a, b) => a - b);
+  const nx = xs.length;
+  const ny = ys.length;
+  const nodeIndex = (ix: number, iy: number) => ix * ny + iy;
+  const pointAt = (ix: number, iy: number): Point => ({ x: xs[ix], y: ys[iy] });
+  const blocked = (ix: number, iy: number) => inside(pointAt(ix, iy));
+  const startIx = xs.indexOf(start.x);
+  const startIy = ys.indexOf(start.y);
+  const endIx = xs.indexOf(end.x);
+  const endIy = ys.indexOf(end.y);
+  if (startIx < 0 || startIy < 0 || endIx < 0 || endIy < 0) return null;
+  const clear = (a: Point, b: Point) => boxes.every((box) => !segmentCrossesBox(a, b, box));
+  const wirePenalty = (a: Point, b: Point): number => {
+    let penalty = 0;
+    for (const route of placed) {
+      for (let i = 0; i < route.length - 1; i += 1) {
+        if (segmentsOverlap(a, b, route[i], route[i + 1])) penalty += 60;
+      }
+    }
+    return penalty;
+  };
+
+  const N = nx * ny;
+  const dist = new Float64Array(N * 3).fill(Number.POSITIVE_INFINITY);
+  const prev = new Int32Array(N * 3).fill(-1);
+  const seen = new Uint8Array(N * 3);
+  const heap: { c: number; s: number }[] = [];
+  const push = (c: number, s: number) => {
+    heap.push({ c, s });
+    let i = heap.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (heap[p].c <= heap[i].c) break;
+      [heap[p], heap[i]] = [heap[i], heap[p]];
+      i = p;
+    }
+  };
+  const pop = () => {
+    const top = heap[0];
+    const last = heap.pop() as { c: number; s: number };
+    if (heap.length > 0) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let best = i;
+        if (l < heap.length && heap[l].c < heap[best].c) best = l;
+        if (r < heap.length && heap[r].c < heap[best].c) best = r;
+        if (best === i) break;
+        [heap[i], heap[best]] = [heap[best], heap[i]];
+        i = best;
+      }
+    }
+    return top;
+  };
+  const heuristic = (ix: number, iy: number) => Math.abs(xs[ix] - end.x) + Math.abs(ys[iy] - end.y);
+  const goalNode = nodeIndex(endIx, endIy);
+  const startState = nodeIndex(startIx, startIy) * 3;
+  dist[startState] = 0;
+  push(heuristic(startIx, startIy), startState);
+  const dirs = [
+    { dx: 1, dy: 0, kind: 1 },
+    { dx: -1, dy: 0, kind: 1 },
+    { dx: 0, dy: 1, kind: 2 },
+    { dx: 0, dy: -1, kind: 2 },
+  ];
+
+  while (heap.length > 0) {
+    const { s } = pop();
+    if (seen[s]) continue;
+    seen[s] = 1;
+    const node = Math.floor(s / 3);
+    const dir = s % 3;
+    const ix = Math.floor(node / ny);
+    const iy = node % ny;
+    if (node === goalNode) break;
+    for (const move of dirs) {
+      const jx = ix + move.dx;
+      const jy = iy + move.dy;
+      if (jx < 0 || jx >= nx || jy < 0 || jy >= ny) continue;
+      if (blocked(jx, jy)) continue;
+      const a = pointAt(ix, iy);
+      const b = pointAt(jx, jy);
+      if (!clear(a, b)) continue;
+      const turn = dir !== 0 && dir !== move.kind ? 6 : 0;
+      const nd = dist[s] + Math.abs(b.x - a.x) + Math.abs(b.y - a.y) + turn + wirePenalty(a, b);
+      const ns = nodeIndex(jx, jy) * 3 + move.kind;
+      if (nd < dist[ns]) {
+        dist[ns] = nd;
+        prev[ns] = s;
+        push(nd + heuristic(jx, jy), ns);
+      }
+    }
+  }
+
+  let best = Number.POSITIVE_INFINITY;
+  let bestState = -1;
+  for (let dir = 1; dir <= 2; dir += 1) {
+    const state = goalNode * 3 + dir;
+    if (dist[state] < best) {
+      best = dist[state];
+      bestState = state;
+    }
+  }
+  if (bestState < 0 || !Number.isFinite(best)) return null;
+  const path: Point[] = [];
+  let state = bestState;
+  while (state >= 0) {
+    const node = Math.floor(state / 3);
+    path.push(pointAt(Math.floor(node / ny), node % ny));
+    state = prev[state];
+  }
+  path.reverse();
+  return dedupeCollinear([from, ...path, to]);
+}
+
 /**
  * A straight wire cannot be separated by shifting its middle (there is no
  * middle). Give it a parallel lane with short jogs at each terminal instead.
@@ -350,6 +538,39 @@ export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
       if (bestScore === 0) break;
     }
     if (best.length === 0) best = baseWirePolyline(doc, wire, 0);
+    // If the chosen corridor still crosses another component (common after a
+    // drag), fall back to a visibility-graph route that goes around bodies.
+    const bodies: Rect[] = [];
+    for (const comp of doc.components) {
+      if (comp.id === wire.from.componentId || comp.id === wire.to.componentId) continue;
+      const b = componentBounds(comp);
+      bodies.push({ x: b.x - 4, y: b.y - 4, width: b.width + 8, height: b.height + 8 });
+    }
+    if (bodies.length > 0) {
+      const crosses = best.some((point, index) =>
+        index === best.length - 1 ? false : bodies.some((box) => segmentCrossesBox(point, best[index + 1], box)),
+      );
+      if (crosses) {
+        const fromComp = doc.components.find((c) => c.id === wire.from.componentId);
+        const toComp = doc.components.find((c) => c.id === wire.to.componentId);
+        const fromDef = fromComp ? getComponentDef(fromComp.kind) : undefined;
+        const toDef = toComp ? getComponentDef(toComp.kind) : undefined;
+        const fromTerm = fromComp && fromDef ? getTerminalDef(fromComp, wire.from.terminalId) : undefined;
+        const toTerm = toComp && toDef ? getTerminalDef(toComp, wire.to.terminalId) : undefined;
+        if (fromComp && toComp && fromTerm && toTerm) {
+          const around = routeAroundComponents(
+            doc,
+            wire,
+            terminalWorld(fromComp, fromTerm),
+            terminalNormal(fromComp, fromTerm.id),
+            terminalWorld(toComp, toTerm),
+            terminalNormal(toComp, toTerm.id),
+            placed,
+          );
+          if (around && around.length > 1) best = around;
+        }
+      }
+    }
     routes[wire.id] = best;
     if (best.length > 0) placed.push(best);
   }
