@@ -5,7 +5,39 @@ build. This document records exactly how that is achieved and verified.
 
 - Repository: `https://github.com/Michaelee125/circuitlab-alevel`
 - Live site: `https://michaelee125.github.io/circuitlab-alevel/`
-- Workflow: `.github/workflows/deploy.yml`
+- Workflow template: [`deploy/github-actions-deploy.yml`](../deploy/github-actions-deploy.yml)
+- Current Pages source: `gh-pages` branch (`build_type: legacy`)
+
+## Current status (verified)
+
+The site is published and verified: HTTP 200, all JS/CSS assets return 200 under
+`/circuitlab-alevel/`, the WebGL canvas renders, the LDR experiment solves and
+the reasoning chain is generated, with zero console errors.
+
+The GitHub token available to this build has the `repo`, `read:org` and `gist`
+scopes but **not** `workflow`. GitHub rejects both a git push and a contents-API
+write of anything under `.github/workflows/`:
+
+```
+! [remote rejected] main -> main (refusing to allow an OAuth App to create or
+  update workflow `.github/workflows/deploy.yml` without `workflow` scope)
+```
+
+Because of that, the workflow is tracked as a template in `deploy/` and the site
+is published from `gh-pages` with the identical build. Activating Actions is a
+single manual step:
+
+```bash
+gh auth refresh -s workflow          # one-time browser approval
+pnpm deploy:actions                  # copies the template to .github/workflows/
+git add .github/workflows/deploy.yml
+git commit -m "ci: deploy to GitHub Pages"
+git push                             # this push starts the workflow
+# Pages → Settings → Source: GitHub Actions (or: gh api -X PUT #   repos/Michaelee125/circuitlab-alevel/pages -f build_type=workflow)
+```
+
+No code changes are required for the switch; `deploy/publish-pages.sh` and the
+workflow build the same app with the same base path.
 
 ## How the pipeline works
 

@@ -1,0 +1,67 @@
+# Deployment verification
+
+Target URL: **https://michaelee125.github.io/circuitlab-alevel/**
+Verified: 2026-11-01, against the public site (not localhost).
+
+## HTTP and assets
+
+| Check | Result |
+| --- | --- |
+| `GET /circuitlab-alevel/` | `200` |
+| `assets/index-*.js` | `200` |
+| `assets/react-*.js` | `200` |
+| `assets/pixi-*.js` | `200` |
+| `assets/charts-*.js` | `200` |
+| `assets/index-*.css` | `200` |
+| `favicon.svg` | `200` |
+| `manifest.webmanifest` | `200` |
+| Pages build status | `built` |
+| Pages source | `gh-pages` (branch) |
+| HTTPS enforced | `true` |
+
+Every asset URL in the deployed `index.html` is prefixed with
+`/circuitlab-alevel/`, confirming the Vite base path is correct for a project
+site.
+
+## Browser checks (Chromium, desktop 1440×900)
+
+| Check | Result |
+| --- | --- |
+| Page boots, brand renders | ✅ |
+| WebGL canvas visible | ✅ |
+| Experiment library → LDR circuit | ✅ 5 components, status `ok` |
+| Increase light action | ✅ total resistance 12 Ω → 6 Ω |
+| Explain panel | ✅ “LDR in series with a fixed resistor”, chain contains 8.00 Ω → 2.00 Ω |
+| Realistic mode | ✅ renders, same circuit and resistance |
+| Console errors | 0 |
+| Failed network requests | 0 |
+
+## Browser checks (Chromium, iPhone 13 emulation 390×664)
+
+| Check | Result |
+| --- | --- |
+| Horizontal overflow | none (scrollWidth = innerWidth = 390) |
+| Mobile tab bar | visible |
+| Components sheet → add resistor | ✅ component count 1 |
+| Console errors | 0 |
+
+## Local automated suites
+
+| Suite | Result |
+| --- | --- |
+| Vitest (physics, transients, reasoning, teaching) | 47 / 47 passed |
+| Playwright desktop project | 11 / 11 passed |
+| Playwright iPhone 13 | 7 / 7 passed |
+| Playwright Pixel 7 | 7 / 7 passed |
+| Playwright iPad (gen 7) | 7 / 7 passed |
+| Total e2e | 32 passed, 18 intentionally skipped (viewport-specific) |
+
+Run the live smoke test any time with:
+
+```bash
+BASE_URL=https://michaelee125.github.io/circuitlab-alevel/ \
+  pnpm exec playwright test e2e/smoke.spec.ts --project=desktop-chromium
+```
+
+(It requires the local preview server entry in `playwright.config.ts`; the
+verification above used a standalone Playwright script against the public URL.)

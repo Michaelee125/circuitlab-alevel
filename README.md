@@ -123,10 +123,24 @@ Full derivations, assumptions and validation values are in
 
 ## Deployment
 
-Pushing to `main` runs `.github/workflows/deploy.yml`: typecheck → unit tests →
-production build with `VITE_BASE_PATH=/<repo>/` → GitHub Pages. See
-[docs/github-deployment.md](docs/github-deployment.md). Custom domains only need
-`VITE_BASE_PATH=/` at build time.
+The site is live at **https://michaelee125.github.io/circuitlab-alevel/**.
+
+Two deployment paths exist, both publishing the same production build:
+
+1. **GitHub Actions → Pages (preferred).** The workflow is tracked at
+   [`deploy/github-actions-deploy.yml`](deploy/github-actions-deploy.yml):
+   typecheck → unit tests → build with `VITE_BASE_PATH=/<repo>/` → official
+   Pages actions. Copy it into `.github/workflows/deploy.yml` after granting the
+   `workflow` OAuth scope (`gh auth refresh -s workflow`) — see
+   [docs/github-deployment.md](docs/github-deployment.md). The token available
+   during this build had `repo`, `read:org` and `gist` only, and GitHub rejects
+   every push or API write of a workflow file with that token.
+2. **`gh-pages` branch (currently used).** `pnpm deploy:pages` builds the app
+   with the project base path and publishes `apps/web/dist` to the `gh-pages`
+   branch; Pages serves that branch. This is what the live URL above is served
+   from.
+
+Custom domains only need `VITE_BASE_PATH=/` at build time.
 
 ## WeChat mini-program (Phase 2)
 

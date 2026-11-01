@@ -14,14 +14,17 @@ Last updated: 2026-11-01 (Phase 1 build)
 | `i18n`, `ui`, `platform-adapters` (web + WeChat) | ✅ complete |
 | `circuit-renderer` (schematic + realistic, particles, meters) | ✅ complete |
 | `apps/web` (editor, modes, panels, responsive, persistence) | ✅ complete |
-| GitHub Actions + Pages deployment | ⏳ in progress |
+| GitHub Actions workflow | 🟡 template ready, activation blocked by missing OAuth `workflow` scope |
+| GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
 - Unit/physics/reasoning/teaching tests: **47 passed**
-- Desktop e2e: **10 passed** (`desktop-chromium`)
-- Mobile e2e: iPhone 13, Pixel 7 and iPad projects (see latest run)
+- Desktop e2e: **11 passed** (`desktop-chromium`, includes the smoke test)
+- Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
+- Total Playwright: **32 passed**, 18 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
+- Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
 
 ## Known limitations
 
@@ -43,9 +46,9 @@ Last updated: 2026-11-01 (Phase 1 build)
 
 ## Next steps
 
-1. Run the mobile Playwright projects and fix any layout findings.
-2. Commit and push to `main`.
-3. Enable Pages with `build_type=workflow`, watch the workflow, verify the live
-   URL and assets, run the smoke test against the public URL.
-4. Phase 2: register the WeChat business domain and port the renderer for the
-   native route.
+1. The only manual deployment step: `gh auth refresh -s workflow`, then
+   `pnpm deploy:actions`, commit and push — this activates the tracked workflow
+   and switches Pages to GitHub Actions. Until then the same build is served
+   from `gh-pages`.
+2. Phase 2: register the WeChat appid and an owned HTTPS business domain, then
+   either ship the `web-view` shell or port the renderer for the native route.
