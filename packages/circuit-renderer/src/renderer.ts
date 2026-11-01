@@ -727,9 +727,15 @@ export class CircuitRenderer {
   }
 
   private drawDashed(from: Point, to: Point): void {
-    const distance = Math.hypot(to.x - from.x, to.y - from.y);
-    const dash = 9;
-    const gap = 7;
+    const distance = Math.max(1, Math.hypot(to.x - from.x, to.y - from.y));
+    // A soft glow and a wide-gap dash make it unmistakably a temporary guide
+    // rather than a real wire.
+    this.overlay
+      .moveTo(from.x, from.y)
+      .lineTo(to.x, to.y)
+      .stroke({ width: 6, color: this.palette.select, alpha: 0.08 });
+    const dash = 6;
+    const gap = 6;
     const steps = Math.max(1, Math.floor(distance / (dash + gap)));
     for (let i = 0; i < steps; i += 1) {
       const t0 = (i * (dash + gap)) / distance;
@@ -737,8 +743,10 @@ export class CircuitRenderer {
       this.overlay
         .moveTo(from.x + (to.x - from.x) * t0, from.y + (to.y - from.y) * t0)
         .lineTo(from.x + (to.x - from.x) * t1, from.y + (to.y - from.y) * t1)
-        .stroke({ width: 2, color: this.palette.select, alpha: 0.85 });
+        .stroke({ width: 1.6, color: this.palette.select, alpha: 0.75 });
     }
+    this.overlay.circle(to.x, to.y, 6).stroke({ width: 1.3, color: this.palette.select, alpha: 0.7 });
+    this.overlay.circle(to.x, to.y, 1.5).fill({ color: this.palette.select, alpha: 0.85 });
   }
 
   private buildFlows(): void {
@@ -813,11 +821,22 @@ export class CircuitRenderer {
       for (let i = 0; i < flow.count; i += 1) {
         const distance = (flow.phase + i * gap + flow.total) % flow.total;
         const point = pointAt(flow, distance);
-        // comet trail behind the carrier
-        const trail = pointAt(flow, (distance - 14 * flow.direction + flow.total * 2) % flow.total);
-        g.moveTo(trail.x, trail.y)
-          .lineTo(point.x, point.y)
-          .stroke({ width: 2.6 * k, color: accent, alpha: 0.28 + intensity * 0.2, cap: 'round' });
+        // The comet trail follows the polyline from a point *behind* the head,
+        // clamped to the wire ends. Never wrap around: a wrapped trail would
+        // draw a long chord across the whole wire (and look like a stray line).
+        const back = 16;
+        const start =
+          flow.direction > 0
+            ? Math.max(0, distance - back)
+            : Math.min(flow.total, distance + back);
+        const steps = 4;
+        const first = pointAt(flow, start);
+        g.moveTo(first.x, first.y);
+        for (let step = 1; step <= steps; step += 1) {
+          const p = pointAt(flow, start + (distance - start) * (step / steps));
+          g.lineTo(p.x, p.y);
+        }
+        g.stroke({ width: 2.6 * k, color: accent, alpha: 0.28 + intensity * 0.2, cap: 'round', join: 'round' });
         g.circle(point.x, point.y, (6.5 + intensity * 3) * k).fill({ color: accent, alpha: 0.1 + intensity * 0.06 });
         g.circle(point.x, point.y, 4.4 * k).fill({ color: accent, alpha: 0.35 + intensity * 0.2 });
         g.circle(point.x, point.y, 2.1 * k).fill({ color: coreColor, alpha: 0.95 });

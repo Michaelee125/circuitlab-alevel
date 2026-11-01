@@ -233,38 +233,128 @@ export function pathsOverlap(a: Point[], b: Point[], tolerance = 7): boolean {
   return false;
 }
 
-const routeCache = new WeakMap<CircuitDocument, Record<string, Point[]>>();
+interface RouteCacheEntry {
+  signature: string;
+  routes: Record<string, Point[]>;
+}
+
+const routeCache = new WeakMap<CircuitDocument, RouteCacheEntry>();
+
+/** Positions plus terminal bindings; catches in-place document mutation. */
+function docSignature(doc: CircuitDocument): string {
+  let signature = '';
+  for (const comp of doc.components) {
+    signature += `${comp.id}:${comp.x},${comp.y},${comp.rotation};`;
+  }
+  for (const wire of doc.wires) {
+    signature += `${wire.id}:${wire.from.componentId}.${wire.from.terminalId}>${wire.to.componentId}.${wire.to.terminalId};`;
+  }
+  return signature;
+}
+
+function segmentHitsBox(a: Point, b: Point, box: Rect, pad = 0): boolean {
+  const x1 = box.x - pad;
+  const x2 = box.x + box.width + pad;
+  const y1 = box.y - pad;
+  const y2 = box.y + box.height + pad;
+  if (Math.abs(a.y - b.y) < 0.5) {
+    return a.y > y1 && a.y < y2 && Math.max(a.x, b.x) > x1 && Math.min(a.x, b.x) < x2;
+  }
+  if (Math.abs(a.x - b.x) < 0.5) {
+    return a.x > x1 && a.x < x2 && Math.max(a.y, b.y) > y1 && Math.min(a.y, b.y) < y2;
+  }
+  return false;
+}
 
 /**
- * Route every wire once, shifting a wire into a parallel lane when it would
- * otherwise sit exactly on top of an earlier wire. Results are cached per
- * immutable document so rendering and hit testing agree.
+ * A straight wire cannot be separated by shifting its middle (there is no
+ * middle). Give it a parallel lane with short jogs at each terminal instead.
+ */
+function offsetStraightRoute(route: Point[], lane: number): Point[] {
+  if (route.length < 2 || lane === 0) return route;
+  const from = route[0];
+  const to = route[route.length - 1];
+  const horizontal = Math.abs(from.y - to.y) < 0.5 && Math.abs(from.x - to.x) > 0.5;
+  const vertical = Math.abs(from.x - to.x) < 0.5 && Math.abs(from.y - to.y) > 0.5;
+  if (!horizontal && !vertical) return route;
+  const stub = 22;
+  if (horizontal) {
+    const dir = Math.sign(to.x - from.x) || 1;
+    const a = { x: from.x + dir * stub, y: from.y };
+    const b = { x: to.x - dir * stub, y: to.y };
+    return [
+      from,
+      a,
+      { x: a.x, y: a.y + lane },
+      { x: b.x, y: b.y + lane },
+      b,
+      to,
+    ];
+  }
+  const dir = Math.sign(to.y - from.y) || 1;
+  const a = { x: from.x, y: from.y + dir * stub };
+  const b = { x: to.x, y: to.y - dir * stub };
+  return [from, a, { x: a.x + lane, y: a.y }, { x: b.x + lane, y: b.y }, b, to];
+}
+
+/**
+ * Route every wire once, choosing the cleanest corridor among several lanes.
+ *
+ * A candidate is scored on (1) how many existing wires it would overlap,
+ * (2) how many other component bodies it would cross, and (3) how much extra
+ * detour it introduces. This keeps wires separated and out of components even
+ * after components are dragged to new positions.
  */
 export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
+  const signature = docSignature(doc);
   const cached = routeCache.get(doc);
-  if (cached) return cached;
+  if (cached && cached.signature === signature) return cached.routes;
+
   const routes: Record<string, Point[]> = {};
   const placed: Point[][] = [];
+  const lanes = [0, 22, -22, 44, -44, 66, -66, 88, -88];
+
   for (const wire of doc.wires) {
-    const base = baseWirePolyline(doc, wire, 0);
-    if (base.length === 0) {
-      routes[wire.id] = base;
-      continue;
+    const obstacles: Rect[] = [];
+    for (const comp of doc.components) {
+      if (comp.id === wire.from.componentId || comp.id === wire.to.componentId) continue;
+      const b = componentBounds(comp);
+      obstacles.push({ x: b.x + 8, y: b.y + 8, width: Math.max(0, b.width - 16), height: Math.max(0, b.height - 16) });
     }
-    let chosen = base;
-    if (placed.some((existing) => pathsOverlap(base, existing))) {
-      for (const lane of [22, -22, 44, -44]) {
-        const candidate = baseWirePolyline(doc, wire, lane);
-        if (candidate.length > 0 && !placed.some((existing) => pathsOverlap(candidate, existing))) {
-          chosen = candidate;
-          break;
+
+    let best: Point[] = [];
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (const lane of lanes) {
+      const base = baseWirePolyline(doc, wire, 0);
+      const candidate =
+        lane !== 0 && base.length > 0 && base.length <= 3
+          ? offsetStraightRoute(base, lane)
+          : baseWirePolyline(doc, wire, lane);
+      if (candidate.length === 0) continue;
+      const segments = axisSegments(candidate);
+      const core = segments.length > 2 ? segments.slice(1, -1) : segments;
+      let score = Math.abs(lane) * 0.15 + Math.max(0, candidate.length - 2) * 0.4;
+      for (const other of placed) {
+        if (pathsOverlap(candidate, other)) score += 120;
+      }
+      for (const segment of core) {
+        for (const box of obstacles) {
+          if (segmentHitsBox(segment.a, segment.b, box)) score += 14;
         }
       }
+      if (score < bestScore) {
+        bestScore = score;
+        best = candidate;
+      }
+      // A clean, straight route cannot be improved by further detours.
+      if (bestScore === 0) break;
     }
-    routes[wire.id] = chosen;
-    placed.push(chosen);
+    if (best.length === 0) best = baseWirePolyline(doc, wire, 0);
+    routes[wire.id] = best;
+    if (best.length > 0) placed.push(best);
   }
-  routeCache.set(doc, routes);
+
+  routeCache.set(doc, { signature, routes });
   return routes;
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { componentAt, getDesignators, terminalAt, wireAt } from '@circuitlab/circuit-core';
+import { componentAt, componentTerminals, getDesignators, terminalAt, wireAt } from '@circuitlab/circuit-core';
 import type { Point } from '@circuitlab/circuit-core';
 import { CircuitRenderer } from '@circuitlab/circuit-renderer';
 import { Button, IconButton, Segmented } from '@circuitlab/ui';
@@ -232,7 +232,16 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       return;
     }
 
-    renderer.setPointer(useCircuitStore.getState().wiringFrom ? world : null);
+    const wiring = useCircuitStore.getState().wiringFrom;
+    let pointer: Point | null = null;
+    if (wiring) {
+      const source = doc.components.find((c) => c.id === wiring.componentId);
+      const start = source ? componentTerminals(source).find((t) => t.id === wiring.terminalId) : undefined;
+      // Do not flash a guide line on a simple tap; only show it once the
+      // finger has actually moved away from the terminal.
+      if (start && Math.hypot(world.x - start.x, world.y - start.y) > 8) pointer = world;
+    }
+    renderer.setPointer(pointer);
     const hover = terminalAt(doc, world, 20);
     renderer.setHoverTerminal(
       hover ? { componentId: hover.componentId, terminalId: hover.terminalId } : null,

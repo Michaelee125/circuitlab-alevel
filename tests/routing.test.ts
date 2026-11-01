@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getWireRoutes, pathsOverlap, wirePath, wirePolyline } from '@circuitlab/circuit-core';
+import { getWireRoutes, moveComponent, pathsOverlap, wirePath, wirePolyline } from '@circuitlab/circuit-core';
+import { EXPERIMENTS } from '@circuitlab/teaching-engine';
 import { buildDoc } from './helpers';
 
 describe('wire routing', () => {
@@ -53,6 +54,64 @@ describe('wire routing', () => {
     }
     // the WeakMap cache returns the same object for the same immutable document
     expect(getWireRoutes(doc)).toBe(routes);
+  });
+
+  it('keeps every preset orthogonal and free of overlapping wires', () => {
+    for (const experiment of EXPERIMENTS) {
+      const doc = experiment.build!();
+      const routes = getWireRoutes(doc);
+      for (const wire of doc.wires) {
+        const points = routes[wire.id];
+        expect(points.length).toBeGreaterThanOrEqual(2);
+        for (let i = 1; i < points.length; i += 1) {
+          const a = points[i - 1];
+          const b = points[i];
+          expect(a.x === b.x || a.y === b.y).toBe(true);
+        }
+      }
+      for (let i = 0; i < doc.wires.length; i += 1) {
+        for (let j = i + 1; j < doc.wires.length; j += 1) {
+          expect(
+            pathsOverlap(routes[doc.wires[i].id], routes[doc.wires[j].id]),
+            `${experiment.id}: wires ${i} and ${j} overlap`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('reroutes dragged layouts into parallel lanes without overlap', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6 }, x: 140, y: 260 },
+        { kind: 'resistor', params: { resistance: 10 }, x: 380, y: 260 },
+        { kind: 'resistor', params: { resistance: 20 }, x: 620, y: 260 },
+        { kind: 'ammeter', x: 860, y: 260 },
+        { kind: 'voltmeter', x: 620, y: 420 },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 3, 'a'],
+        [3, 'b', 0, 'neg'],
+        [2, 'a', 4, 'a'],
+        [2, 'b', 4, 'b'],
+      ],
+    );
+    const dragged = moveComponent(doc, doc.components[2].id, 380, 420);
+    const routes = getWireRoutes(dragged);
+    const list = dragged.wires.map((w) => routes[w.id]);
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) {
+        expect(pathsOverlap(list[i], list[j]), `wires ${i} and ${j} overlap after drag`).toBe(false);
+      }
+    }
+    // the two voltmeter leads become coincident straight lines after the drag,
+    // so one must be pushed into a parallel lane with terminal jogs.
+    const leadA = routes[dragged.wires[4].id];
+    const leadB = routes[dragged.wires[5].id];
+    const maxY = Math.max(...[...leadA, ...leadB].map((p) => p.y));
+    expect(maxY).toBeGreaterThan(420);
   });
 
   it('gives parallel corridors different lanes when they would coincide', () => {

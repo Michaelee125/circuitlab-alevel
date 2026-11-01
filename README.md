@@ -76,6 +76,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Phone top bar with grouped controls, styled language picker and no clipped toolbars | ✅ |
 | Canvas inset below the floating toolbar; compact V/I/R cards on phones | ✅ |
 | Liquid Glass press: specular sheen, ripple ring and spring scale on every control | ✅ |
+| Smart rewiring after dragging: parallel lanes for coincident wires, component-aware routes | ✅ |
 | Floating Liquid Glass bottom dock, phone tab bar and bottom sheets | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |

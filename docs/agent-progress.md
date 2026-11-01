@@ -18,7 +18,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **52 passed**
+- Unit/physics/reasoning/teaching/routing tests: **54 passed**
 - Desktop e2e: **18 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
 - Total Playwright: **39 passed**, 57 intentionally skipped
@@ -68,6 +68,14 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - The desktop chart dock became a floating Liquid Glass panel: layered translucent gradient, 50 px backdrop blur with saturation and brightness lift, inset top highlight, 24 px corners and a deep soft shadow; its header gets its own hairline sheen.
 - On phones the tab bar is now a floating glass capsule (24 px radius, 46 px blur) with an active glass pill, and the bottom sheets (Properties/Explain/Compare/Graph) use the same layered glass with a specular top edge.
 - Fixed the internal-resistance example wiring (voltmeter polarity) so its leads no longer cross the cell, and meter readings now scale into the display so digits stay inside the instrument.
+
+## Wire routing and current animation pass (seventh review)
+
+- Rewrote route selection as a scored search over several lanes: a candidate is penalised for overlapping existing wires, crossing other component bodies, and unnecessary detour. Results are cached against a document signature (positions + terminal bindings) so in-place edits cannot serve stale routes.
+- Straight wires that would coincide (common after dragging a voltmeter next to a resistor) are now offset into a parallel lane with short terminal jogs instead of being drawn on top of each other. All preset circuits now route with zero overlapping pairs.
+- The wiring guide is an unmistakable ghost: wide-gap dashes, a soft glow and a ring at the fingertip; it only appears after the pointer has moved away from the terminal.
+- Fixed the stray diagonal lines in the current animation: a comet trail could wrap around the end of a wire and draw a chord across the whole circuit. Trails now clamp at the wire ends and interpolate along the polyline.
+- Added routing regression tests for preset orthogonality/no-overlap and for dragged layouts; unit suite is now 54 tests.
 
 ## Known limitations
 
