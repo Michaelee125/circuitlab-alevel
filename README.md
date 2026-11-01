@@ -18,9 +18,11 @@ circuit — not from keyword matching.
 
 ![CircuitLab Liquid Glass interface with live component values](docs/images/glass-schematic-values.png)
 
-| Liquid Glass schematic + live V / I / R | Realistic mode with animated lamp glow |
+| Liquid Glass schematic + live V / I / R | Realistic mode with live values |
 | --- | --- |
-| ![Schematic with live component values](docs/images/glass-schematic-values.png) | ![Realistic lamp with power-scaled glow](docs/images/glass-lamp-glow.png) |
+| ![Schematic with live component values](docs/images/glass-schematic-values.png) | ![Realistic components with live values](docs/images/glass-values-realistic.png) |
+| Voltmeter close-up (reading clear of wires) | Realistic lamp with power-scaled glow |
+| ![Voltmeter close-up](docs/images/glass-voltmeter.png) | ![Realistic lamp with power-scaled glow](docs/images/glass-lamp-glow.png) |
 | Apple-style settings menu | 中文界面 |
 | ![Settings popover](docs/images/glass-settings.png) | ![Chinese interface](docs/images/glass-chinese.png) |
 | Liquid Glass sheet on a phone | |
@@ -61,7 +63,9 @@ stays at the supply voltage and only the LDR branch current changes.
 | Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
-| Live V / I / R chips beside each component (collision-aware, constant size at any zoom) | ✅ |
+| Live V / I / R cards in a Liquid Glass frame, toggled by a labelled **Values** switch | ✅ |
+| Strict card placement: never overlaps components, designators, other cards or wires (hidden if no free spot) | ✅ |
+| Meter readings auto-fit their screen and are kept clear of return wires | ✅ |
 | Animated feedback: lamp glow scales with power, glowing comet-style current particles, value-change pulses | ✅ |
 | Apple-style settings popover (appearance, quality, values, grid, pin, circuit actions) | ✅ |
 | One-tap dark / light theme toggle in the desktop and phone top bars | ✅ |

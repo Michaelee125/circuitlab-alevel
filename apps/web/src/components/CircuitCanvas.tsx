@@ -371,13 +371,18 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
             ]}
           />
           <div style={{ width: 3 }} />
-          <IconButton
+          <Button
+            size="sm"
+            variant="subtle"
             icon="tag"
-            label={t(language, 'settings.values')}
-            active={showValues}
+            aria-label={t(language, 'settings.values')}
             aria-pressed={showValues}
+            title={t(language, 'settings.valuesHint')}
+            className={showValues ? 'is-active' : ''}
             onClick={() => useCircuitStore.getState().toggleValues()}
-          />
+          >
+            {t(language, 'settings.valuesShort')}
+          </Button>
         </div>
 
         <div style={{ flex: 1 }} />

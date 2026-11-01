@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, FillGradient, Graphics, Text } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import {
   componentBounds,
@@ -16,7 +16,7 @@ import type {
 import type { CircuitSolution } from '@circuitlab/physics-engine';
 import { formatQuantity } from '@circuitlab/i18n';
 import { paletteFor, type Palette } from './palette';
-import { drawRealisticBody, drawSchematicBody } from './drawing';
+import { drawRealisticBody, drawSchematicBody, mixColor } from './drawing';
 
 export interface RenderState {
   doc: CircuitDocument;
@@ -442,8 +442,8 @@ export class CircuitRenderer {
     if (!state?.showValues || !state.solution) return;
 
     const zoom = this.view.zoom;
-    const W = 112;
-    const H = 54;
+    const W = 108;
+    const H = 52;
     const GAP = 12;
     const toScreen = (p: Point) => ({ x: p.x * zoom + this.view.x, y: p.y * zoom + this.view.y });
 
@@ -463,6 +463,28 @@ export class CircuitRenderer {
       occupied.push({ x: b.x + b.width / 2 - 26, y: b.y + b.height + 2, width: 52, height: 24 });
     });
 
+    const wireSegments: { a: Point; b: Point }[] = [];
+    for (const wire of state.doc.wires) {
+      const points = wirePolyline(state.doc, wire).map(toScreen);
+      for (let i = 0; i < points.length - 1; i += 1) {
+        wireSegments.push({ a: points[i], b: points[i + 1] });
+      }
+    }
+
+    const segmentHitsRect = (a: Point, b: Point, rect: { x: number; y: number; width: number; height: number }): boolean => {
+      const inside = (p: Point) =>
+        p.x > rect.x && p.x < rect.x + rect.width && p.y > rect.y && p.y < rect.y + rect.height;
+      if (inside(a) || inside(b)) return true;
+      const edges: { a: Point; b: Point }[] = [
+        { a: { x: rect.x, y: rect.y }, b: { x: rect.x + rect.width, y: rect.y } },
+        { a: { x: rect.x + rect.width, y: rect.y }, b: { x: rect.x + rect.width, y: rect.y + rect.height } },
+        { a: { x: rect.x + rect.width, y: rect.y + rect.height }, b: { x: rect.x, y: rect.y + rect.height } },
+        { a: { x: rect.x, y: rect.y + rect.height }, b: { x: rect.x, y: rect.y } },
+      ];
+      const ccw = (p: Point, q: Point, r: Point) => (r.y - p.y) * (q.x - p.x) > (q.y - p.y) * (r.x - p.x);
+      return edges.some((edge) => ccw(a, b, edge.a) !== ccw(a, b, edge.b) && ccw(edge.a, edge.b, a) !== ccw(edge.a, edge.b, b));
+    };
+
     const intersects = (
       a: { x: number; y: number; width: number; height: number },
       b: { x: number; y: number; width: number; height: number },
@@ -481,46 +503,65 @@ export class CircuitRenderer {
       const index = state.doc.components.indexOf(comp);
       const b = screenBounds[index];
       const focus = toScreen({ x: comp.x, y: comp.y });
+      const gap = 14;
       const candidates = [
-        { x: b.x + b.width / 2 - W / 2, y: b.y - H - GAP },
-        { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + GAP + 20 },
-        { x: b.x + b.width + GAP, y: b.y + b.height / 2 - H / 2 },
-        { x: b.x - W - GAP, y: b.y + b.height / 2 - H / 2 },
+        { x: b.x + b.width / 2 - W / 2, y: b.y - H - gap },
+        { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + gap + 20 },
+        { x: b.x + b.width + gap, y: b.y + b.height / 2 - H / 2 },
+        { x: b.x - W - gap, y: b.y + b.height / 2 - H / 2 },
+        { x: b.x + b.width / 2 - W / 2, y: b.y - H - gap - 24 },
+        { x: b.x + b.width + gap + 22, y: b.y - H - gap },
+        { x: b.x - W - gap - 22, y: b.y + b.height + gap },
+        { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + gap + 46 },
       ];
+      const topInset = 64;
       const inCanvas = (rect: { x: number; y: number; width: number; height: number }) =>
         rect.x >= 8 &&
-        rect.y >= 8 &&
+        rect.y >= topInset &&
         rect.x + rect.width <= this.width - 8 &&
-        rect.y + rect.height <= this.height - 8;
-      let chosen = candidates[0];
-      let placed = false;
+        rect.y + rect.height <= this.height - 10;
+      // Only place a chip where it overlaps nothing at all. If the area is too
+      // crowded the chip is omitted rather than drawn on top of an element.
+      let chosen: { x: number; y: number } | null = null;
       for (const candidate of candidates) {
         const rect = { ...candidate, width: W, height: H };
-        if (inCanvas(rect) && !occupied.some((other) => intersects(rect, other))) {
-          chosen = candidate;
-          placed = true;
-          break;
-        }
+        if (!inCanvas(rect)) continue;
+        if (occupied.some((other) => intersects(rect, other))) continue;
+        if (wireSegments.some((segment) => segmentHitsRect(segment.a, segment.b, rect))) continue;
+        chosen = candidate;
+        break;
       }
-      if (!placed) {
-        chosen = {
-          x: Math.max(8, Math.min(chosen.x, this.width - W - 8)),
-          y: Math.max(8, Math.min(chosen.y, this.height - H - 8)),
-        };
-      }
+      if (!chosen) continue;
       occupied.push({ ...chosen, width: W, height: H });
-
       const chip = new Container();
       const g = new Graphics();
       const cx = chosen.x + W / 2;
       const cy = chosen.y + H / 2;
-      g.moveTo(cx, cy).lineTo(focus.x, focus.y).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.6 });
-      g.roundRect(chosen.x, chosen.y, W, H, 12)
-        .fill({ color: this.palette.chipBg, alpha: 0.94 })
-        .stroke({ width: 1, color: this.palette.chipLine, alpha: 0.95 });
-      g.roundRect(chosen.x + 1, chosen.y + 1, W - 2, H / 2, 11).fill({ color: 0xffffff, alpha: 0.05 });
-      // left accent bar
-      g.roundRect(chosen.x + 6, chosen.y + 9, 2.5, H - 18, 1.25).fill({ color: this.palette.accent, alpha: 0.85 });
+      const dark = this.palette.chipBg !== 0xffffff;
+      // leader line sits behind the glass
+      g.moveTo(cx, cy).lineTo(focus.x, focus.y).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.7 });
+      // soft contact shadow
+      g.roundRect(chosen.x + 1, chosen.y + 4, W, H, 15).fill({ color: 0x000000, alpha: dark ? 0.34 : 0.16 });
+      // frosted body
+      const topColor = mixColor(this.palette.chipBg, 0xffffff, dark ? 0.1 : 0);
+      const body = new FillGradient({
+        type: 'linear',
+        start: { x: 0, y: 0 },
+        end: { x: 0, y: 1 },
+        colorStops: [
+          { offset: 0, color: topColor },
+          { offset: 1, color: this.palette.chipBg },
+        ],
+        textureSpace: 'local',
+      });
+      g.roundRect(chosen.x, chosen.y, W, H, 15).fill(body);
+      g.roundRect(chosen.x, chosen.y, W, H, 15).fill({ color: this.palette.accent, alpha: 0.035 });
+      // glass sheen + inner hairline
+      g.roundRect(chosen.x + 1.5, chosen.y + 1.5, W - 3, H * 0.46, 13).fill({ color: 0xffffff, alpha: dark ? 0.08 : 0.5 });
+      g.roundRect(chosen.x, chosen.y, W, H, 15).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.95 });
+      g.roundRect(chosen.x + 1, chosen.y + 1, W - 2, H - 2, 14).stroke({ width: 0.6, color: 0xffffff, alpha: dark ? 0.12 : 0.8 });
+      // left accent rail
+      g.roundRect(chosen.x + 6.5, chosen.y + 9, 2.5, H - 18, 1.25).fill({ color: this.palette.accent, alpha: 0.9 });
       chip.addChild(g);
 
       const isSource = comp.kind === 'cell' || comp.kind === 'battery';

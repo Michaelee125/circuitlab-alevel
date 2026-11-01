@@ -112,7 +112,7 @@ export function wirePath(
     Math.abs(from.x - to.x) > 280 &&
     Math.abs(from.y - to.y) < 48
   ) {
-    const laneY = Math.max(from.y, to.y) + 170 + lane;
+    const laneY = Math.max(from.y, to.y) + 220 + lane;
     // Shift both drops with the lane so two parallel return wires are fully
     // separated, not just their horizontal runs.
     const dropA = a1.x + lane;
@@ -325,6 +325,14 @@ export function documentBounds(doc: CircuitDocument): Rect {
     maxX = Math.max(maxX, b.x + b.width);
     minY = Math.min(minY, b.y);
     maxY = Math.max(maxY, b.y + b.height);
+  }
+  for (const wire of doc.wires) {
+    for (const point of wirePolyline(doc, wire)) {
+      minX = Math.min(minX, point.x);
+      maxX = Math.max(maxX, point.x);
+      minY = Math.min(minY, point.y);
+      maxY = Math.max(maxY, point.y);
+    }
   }
   const pad = 36;
   return {

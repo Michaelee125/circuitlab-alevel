@@ -47,6 +47,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Added a one-tap dark / light theme toggle back to both the desktop and mobile top bars.
 - Fit-to-view is tighter, and the canvas now shrinks above the chart dock so circuits (including voltmeters) are never hidden behind the graph panel.
 
+## Third visual pass (fourth review)
+
+- Voltmeter/ammeter readings no longer collide with the long return wire: detour lanes now run 220 units below the row (document bounds include routed wires so fit-to-view cannot clip them), and meter text is scaled down when a reading would overflow its display.
+- The live-values feature now has a clearly labelled **Values** pill in the canvas toolbar (active state + aria-pressed), in addition to the settings and help switches; the preference persists.
+- Value cards were restyled as Liquid Glass panels: gradient frost, top sheen, double hairline border, soft contact shadow and an accent rail.
+- Card placement is strict: eight candidate positions around each component, rejecting any overlap with components, designator labels, other cards or wire segments; when no free position exists the card is omitted rather than drawn over the circuit (it reappears as you pan or zoom).
+
 ## Known limitations
 
 - Exam marking is software-authored keyword practice marking (English only).

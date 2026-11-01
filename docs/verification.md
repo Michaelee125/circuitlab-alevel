@@ -40,7 +40,9 @@ site.
 | Redundant wire attempt | ✅ “These terminals are already connected.”, wire count unchanged |
 | Wire selection + delete | ✅ selected corridor highlighted, Delete removes it |
 | Liquid Glass UI | ✅ pure-black dark body (`rgb(0, 0, 0)`), frosted panels, iOS controls |
-| Live component values | ✅ settings/toolbar toggle, collision-aware V/I/R chips |
+| Live component values | ✅ labelled Values switch in the toolbar (plus settings/help switches), persisted |
+| Value card placement | ✅ 8 candidate positions; refuses any overlap with components, labels, cards or wires |
+| Voltmeter legibility | ✅ reading auto-scales to its display; return lane routed below meters |
 | Apple-style settings menu | ✅ frosted popover with switches and segmented controls |
 | Lamp brightness feedback | ✅ glow scales from a faint halo at 2 V to a wide warm halo at 12 V |
 | Current animation | ✅ additive comet particles visible at default and high zoom |
