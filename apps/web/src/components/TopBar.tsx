@@ -318,7 +318,6 @@ export function MobileTopBar() {
   return (
     <header className="mobile-topbar">
       <Brand compact />
-      <div style={{ flex: 1 }} />
       <div className="mobile-mode">
         <Segmented
           value={mode}
@@ -331,15 +330,23 @@ export function MobileTopBar() {
           ]}
         />
       </div>
-      <IconButton icon="flask" label={t(language, 'experiments.library')} size={16} onClick={() => setSheet('experiments')} />
+      <div style={{ flex: 1 }} />
       <LanguagePicker compact />
-      <IconButton
-        icon={theme === 'dark' ? 'moon' : 'sun'}
-        label={t(language, 'view.theme')}
-        size={16}
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      />
-      <IconButton icon="menu" label={t(language, 'save.title')} size={16} onClick={() => setSheet('saved')} />
+      <div className="mobile-actions">
+        <IconButton
+          icon="flask"
+          label={t(language, 'experiments.library')}
+          size={16}
+          onClick={() => setSheet('experiments')}
+        />
+        <IconButton
+          icon={theme === 'dark' ? 'moon' : 'sun'}
+          label={t(language, 'view.theme')}
+          size={16}
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        />
+        <IconButton icon="menu" label={t(language, 'save.title')} size={16} onClick={() => setSheet('saved')} />
+      </div>
       {experiment && <span style={{ display: 'none' }}>{experiment.title.en}</span>}
     </header>
   );

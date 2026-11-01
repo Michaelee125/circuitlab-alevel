@@ -25,8 +25,9 @@ circuit — not from keyword matching.
 | ![Voltmeter close-up](docs/images/glass-voltmeter.png) | ![Realistic lamp with power-scaled glow](docs/images/glass-lamp-glow.png) |
 | Apple-style settings menu | 中文界面 |
 | ![Settings popover](docs/images/glass-settings.png) | ![Chinese interface](docs/images/glass-chinese.png) |
-| Liquid Glass sheet on a phone | |
-| ![Mobile glass sheet](docs/images/glass-mobile.png) | |
+| Phone layout with compact cards | Liquid Glass sheet on a phone |
+| --- | --- |
+| ![Phone layout with compact value cards](docs/images/glass-mobile.png) | ![Mobile glass sheet](docs/images/glass-mobile-sheet.png) |
 
 ## Why this is not just an animation
 
@@ -69,6 +70,8 @@ stays at the supply voltage and only the LDR branch current changes.
 | Animated feedback: lamp glow scales with power, glowing comet-style current particles, value-change pulses | ✅ |
 | Apple-style settings popover (appearance, quality, values, grid, pin, circuit actions) | ✅ |
 | One-tap dark / light theme toggle in the desktop and phone top bars | ✅ |
+| Phone top bar with grouped controls, styled language picker and no clipped toolbars | ✅ |
+| Canvas inset below the floating toolbar; compact V/I/R cards on phones | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |
 | Save/load (IndexedDB), JSON import/export, share link | ✅ |

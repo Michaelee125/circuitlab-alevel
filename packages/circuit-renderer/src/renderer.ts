@@ -442,8 +442,10 @@ export class CircuitRenderer {
     if (!state?.showValues || !state.solution) return;
 
     const zoom = this.view.zoom;
-    const W = 108;
-    const H = 52;
+    // Narrow canvases (phones) get compact cards so several can sit side by side.
+    const compact = this.width < 560;
+    const W = compact ? 80 : 108;
+    const H = compact ? 44 : 52;
     const GAP = 12;
     const toScreen = (p: Point) => ({ x: p.x * zoom + this.view.x, y: p.y * zoom + this.view.y });
 
@@ -514,7 +516,7 @@ export class CircuitRenderer {
         { x: b.x - W - gap - 22, y: b.y + b.height + gap },
         { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + gap + 46 },
       ];
-      const topInset = 64;
+      const topInset = compact ? 8 : 64;
       const inCanvas = (rect: { x: number; y: number; width: number; height: number }) =>
         rect.x >= 8 &&
         rect.y >= topInset &&
@@ -539,9 +541,13 @@ export class CircuitRenderer {
       const cy = chosen.y + H / 2;
       const dark = this.palette.chipBg !== 0xffffff;
       // leader line sits behind the glass
+      const radius = compact ? 11 : 15;
       g.moveTo(cx, cy).lineTo(focus.x, focus.y).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.7 });
       // soft contact shadow
-      g.roundRect(chosen.x + 1, chosen.y + 4, W, H, 15).fill({ color: 0x000000, alpha: dark ? 0.34 : 0.16 });
+      g.roundRect(chosen.x + 1, chosen.y + (compact ? 3 : 4), W, H, radius).fill({
+        color: 0x000000,
+        alpha: dark ? 0.34 : 0.16,
+      });
       // frosted body
       const topColor = mixColor(this.palette.chipBg, 0xffffff, dark ? 0.1 : 0);
       const body = new FillGradient({
@@ -554,14 +560,24 @@ export class CircuitRenderer {
         ],
         textureSpace: 'local',
       });
-      g.roundRect(chosen.x, chosen.y, W, H, 15).fill(body);
-      g.roundRect(chosen.x, chosen.y, W, H, 15).fill({ color: this.palette.accent, alpha: 0.035 });
+      g.roundRect(chosen.x, chosen.y, W, H, radius).fill(body);
+      g.roundRect(chosen.x, chosen.y, W, H, radius).fill({ color: this.palette.accent, alpha: 0.035 });
       // glass sheen + inner hairline
-      g.roundRect(chosen.x + 1.5, chosen.y + 1.5, W - 3, H * 0.46, 13).fill({ color: 0xffffff, alpha: dark ? 0.08 : 0.5 });
-      g.roundRect(chosen.x, chosen.y, W, H, 15).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.95 });
-      g.roundRect(chosen.x + 1, chosen.y + 1, W - 2, H - 2, 14).stroke({ width: 0.6, color: 0xffffff, alpha: dark ? 0.12 : 0.8 });
+      g.roundRect(chosen.x + 1.5, chosen.y + 1.5, W - 3, H * 0.46, radius - 2).fill({
+        color: 0xffffff,
+        alpha: dark ? 0.08 : 0.5,
+      });
+      g.roundRect(chosen.x, chosen.y, W, H, radius).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.95 });
+      g.roundRect(chosen.x + 1, chosen.y + 1, W - 2, H - 2, radius - 1).stroke({
+        width: 0.6,
+        color: 0xffffff,
+        alpha: dark ? 0.12 : 0.8,
+      });
       // left accent rail
-      g.roundRect(chosen.x + 6.5, chosen.y + 9, 2.5, H - 18, 1.25).fill({ color: this.palette.accent, alpha: 0.9 });
+      g.roundRect(chosen.x + (compact ? 5 : 6.5), chosen.y + (compact ? 7 : 9), 2.2, H - (compact ? 14 : 18), 1.1).fill({
+        color: this.palette.accent,
+        alpha: 0.9,
+      });
       chip.addChild(g);
 
       const isSource = comp.kind === 'cell' || comp.kind === 'battery';
@@ -582,13 +598,16 @@ export class CircuitRenderer {
           text: row.text,
           style: {
             fontFamily: MONO,
-            fontSize: 10.5,
+            fontSize: compact ? 7.7 : 10.5,
             fontWeight: '600',
             fill: row.color,
-            letterSpacing: 0.2,
+            letterSpacing: 0.15,
           },
         });
-        text.position.set(chosen.x + 14, chosen.y + 7 + rowIndex * 14.5);
+        text.position.set(
+          chosen.x + (compact ? 10 : 14),
+          chosen.y + (compact ? 5 : 7) + rowIndex * (compact ? 11.6 : 14.5),
+        );
         chip.addChild(text);
       });
       this.chipRoot.addChild(chip);

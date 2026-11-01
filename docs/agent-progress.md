@@ -54,6 +54,14 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Value cards were restyled as Liquid Glass panels: gradient frost, top sheen, double hairline border, soft contact shadow and an accent rail.
 - Card placement is strict: eight candidate positions around each component, rejecting any overlap with components, designator labels, other cards or wire segments; when no free position exists the card is omitted rather than drawn over the circuit (it reappears as you pan or zoom).
 
+## Mobile control pass (fifth review)
+
+- The phone toolbars no longer clip: the stage overlay scroll container was removed, the Values control collapses to its icon (still with aria-pressed), and at ≤380 px the controls shrink so undo, redo, delete, fit and view switch all remain visible at 320 px.
+- The canvas is inset 64 px on phones, so the floating toolbar never covers the circuit; fit-to-view uses the remaining area.
+- The phone top bar was regrouped: brand + mode segmented on the left, spacer, then the language picker and a single glass cluster holding the experiment library, theme toggle and menu, separated by hairlines. The native select is now an Apple-style pill with a custom chevron.
+- Compact value cards (80 × 44, 7.7 px mono) let three cards sit above a phone circuit without overlapping; desktop keeps the larger glass cards.
+- Toasts now sit above the phone tab bar instead of covering it.
+
 ## Known limitations
 
 - Exam marking is software-authored keyword practice marking (English only).

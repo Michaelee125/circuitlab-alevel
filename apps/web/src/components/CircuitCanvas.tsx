@@ -348,7 +348,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       <div
         ref={hostRef}
         className="canvas-host"
-        style={{ bottom: dockOpen ? 300 : 0 }}
+        style={{ top: compact ? 64 : 0, bottom: dockOpen ? 300 : 0 }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -378,10 +378,10 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
             aria-label={t(language, 'settings.values')}
             aria-pressed={showValues}
             title={t(language, 'settings.valuesHint')}
-            className={showValues ? 'is-active' : ''}
+            className={`values-btn ${showValues ? 'is-active' : ''}`}
             onClick={() => useCircuitStore.getState().toggleValues()}
           >
-            {t(language, 'settings.valuesShort')}
+            <span className="canvas-values-label">{t(language, 'settings.valuesShort')}</span>
           </Button>
         </div>
 
