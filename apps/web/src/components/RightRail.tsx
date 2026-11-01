@@ -94,6 +94,39 @@ function ParamEditor({ comp }: { comp: ComponentInstance }) {
           />
         </>
       );
+    case 'potentiometer':
+      return (
+        <>
+          <Slider
+            label={t(language, 'properties.resistance')}
+            value={Math.min(comp.params.resistance ?? 100, 500)}
+            min={1}
+            max={500}
+            step={1}
+            format={(v) => formatQuantity(v, 'resistance')}
+            onChange={(resistance) => set({ resistance })}
+          />
+          <NumberField
+            label={t(language, 'properties.resistance')}
+            value={comp.params.resistance ?? 100}
+            min={0.1}
+            max={1e6}
+            step={1}
+            unit="Ω"
+            onChange={(resistance) => set({ resistance })}
+          />
+          <Slider
+            label={t(language, 'properties.wiper')}
+            value={(comp.params.wiper ?? 0.5) * 100}
+            min={0}
+            max={100}
+            step={1}
+            format={(v) => `${Math.round(v)}%`}
+            onChange={(wiper) => set({ wiper: wiper / 100 })}
+            hint={t(language, 'properties.wiperHint')}
+          />
+        </>
+      );
     case 'resistor':
     case 'variable-resistor':
       return (
@@ -352,6 +385,43 @@ export function Inspector() {
       </div>
 
       <ParamEditor comp={comp} />
+
+      {reading && comp.kind === 'potentiometer' && reading.valid && (
+        <>
+          <div className="section-label">{t(language, 'properties.wiperOutput')}</div>
+          <div className="meter-cards">
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.wiperPd')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(Math.abs(reading.extra?.wiperVoltage ?? 0), 'voltage')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.sectionAW')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(reading.extra?.resistanceAW ?? 0, 'resistance')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.sectionWB')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(reading.extra?.resistanceWB ?? 0, 'resistance')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.wiperCurrent')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(Math.abs(reading.extra?.wiperCurrent ?? 0), 'current')}
+              </div>
+            </div>
+          </div>
+          <div className="field-hint">
+            V_WB = (R_WB / R_total) × V_AB = ({formatQuantity(reading.extra?.resistanceWB ?? 0, 'resistance')} /{' '}
+            {formatQuantity(comp.params.resistance ?? 0, 'resistance')}) ×{' '}
+            {formatQuantity(reading.voltageMagnitude, 'voltage')}
+          </div>
+        </>
+      )}
 
       {reading && showInternal && (
         <>

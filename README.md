@@ -37,9 +37,9 @@ circuit — not from keyword matching.
 | Reasoning: rheostat + lamp | Rewiring around a dragged component |
 | --- | --- |
 | ![Verified chain for a variable resistor and lamp](docs/images/reasoning-rheostat-lamp.png) | ![Wire detouring around a dragged resistor](docs/images/routing-detour.png) |
-| Manual wire adjustment | |
+| Manual wire adjustment | Three-terminal sliding rheostat |
 | --- | --- |
-| ![A wire dragged into a manual route with handles and reset control](docs/images/manual-wire.png) | |
+| ![A wire dragged into a manual route with handles and reset control](docs/images/manual-wire.png) | ![Sliding rheostat used as a potential divider](docs/images/potentiometer-divider.png) |
 
 ## Why this is not just an animation
 
@@ -65,7 +65,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Area | Status |
 | --- | --- |
 | Free circuit editor (add, drag, rotate, delete, orthogonal wires, snap, zoom/pan, undo/redo, auto-arrange) | ✅ |
-| 12 components: cell, battery, resistor, variable resistor, filament lamp, switch, ammeter, voltmeter, LDR, NTC thermistor, capacitor, diode | ✅ |
+| 13 components: cell, battery, resistor, adjustable resistor (2-wire), sliding rheostat (3-wire), filament lamp, switch, ammeter, voltmeter, LDR, NTC thermistor, capacitor, diode | ✅ |
 | Schematic and realistic rendering, same model and results | ✅ |
 | MNA DC solver with internal resistance, ideal meters, open/short/singular handling | ✅ |
 | Non-linear lamp and diode models, RC analytic transients | ✅ |
@@ -76,6 +76,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
 | Manual wire adjustment: drag a wire to reshape it, handles on movable segments, reset to automatic | ✅ |
+| Two distinct variable components: 2-terminal adjustable resistor and 3-terminal sliding rheostat with a wiper divider | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
 | Live V / I / R cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch | ✅ |
 | Strict card placement: never overlaps components, designators, other cards or wires (hidden if no free spot) | ✅ |

@@ -932,6 +932,15 @@ function explainGeneralChange(
     titleEn = 'Internal resistance change';
     titleZh = '电源内阻变化';
     ruleId = 'network-internal-resistance';
+  } else if (change.key === 'wiper' && changed.kind === 'potentiometer') {
+    const beforeWiper = Number(change.before ?? 0.5);
+    const afterWiper = Number(change.after ?? 0.5);
+    const towardA = afterWiper > beforeWiper;
+    causeEn = `The wiper of ${changedLabel} is moved ${towardA ? 'towards A' : 'towards B'} (from ${Math.round(beforeWiper * 100)}% to ${Math.round(afterWiper * 100)}%).`;
+    causeZh = `${changedLabel} 的滑片向 ${towardA ? 'A' : 'B'} 端移动（由 ${Math.round(beforeWiper * 100)}% 到 ${Math.round(afterWiper * 100)}%）。`;
+    titleEn = 'Adjusting a potential divider';
+    titleZh = '调节分压器';
+    ruleId = 'network-potentiometer';
   } else if (isLamp) {
     causeEn = `The lamp ${changedLabel} is adjusted; its operating resistance changes from ${rB === null ? '—' : `${fmt(rB)} Ω`} to ${rA === null ? '—' : `${fmt(rA)} Ω`}.`;
     causeZh = `灯泡 ${changedLabel} 的特性改变，其工作电阻由 ${rB === null ? '—' : `${fmt(rB)} Ω`} 变为 ${rA === null ? '—' : `${fmt(rA)} Ω`}。`;
@@ -972,6 +981,40 @@ function explainGeneralChange(
       [changed.id],
       { [`R:${changed.id}`]: { before: rB, after: rA, delta: rA - rB, direction: dR, unit: 'Ω' } },
     );
+  }
+
+  if (change.key === 'wiper' && changed.kind === 'potentiometer') {
+    const rTotalBefore = Number(beforeComp.params.resistance ?? 100);
+    const rTotalAfter = Number(changed.params.resistance ?? 100);
+    const fBefore = Math.min(1, Math.max(0, Number(beforeComp.params.wiper ?? 0.5)));
+    const fAfter = Math.min(1, Math.max(0, Number(changed.params.wiper ?? 0.5)));
+    const awBefore = Math.max(1e-3, (1 - fBefore) * rTotalBefore);
+    const wbBefore = Math.max(1e-3, fBefore * rTotalBefore);
+    const awAfter = Math.max(1e-3, (1 - fAfter) * rTotalAfter);
+    const wbAfter = Math.max(1e-3, fAfter * rTotalAfter);
+    const vBefore = Math.abs(bSol.components[changed.id]?.extra?.wiperVoltage ?? 0);
+    const vAfter = Math.abs(aSol.components[changed.id]?.extra?.wiperVoltage ?? 0);
+    const dWb = direction(wbBefore, wbAfter, 1e-5);
+    const dAw = direction(awBefore, awAfter, 1e-5);
+    const dV = direction(vBefore, vAfter, 1e-4);
+    push(
+      'wiper-sections',
+      'change',
+      'potential-divider',
+      `The wiper taps the track at a new point: the W–B section ${RISE_EN[dWb]} from ${fmt(wbBefore)} Ω to ${fmt(wbAfter)} Ω, while the A–W section ${RISE_EN[dAw]} from ${fmt(awBefore)} Ω to ${fmt(awAfter)} Ω.`,
+      `滑片移到新的位置：W–B 段电阻由 ${fmt(wbBefore)} Ω ${RISE_ZH[dWb]}到 ${fmt(wbAfter)} Ω，A–W 段电阻由 ${fmt(awBefore)} Ω ${RISE_ZH[dAw]}到 ${fmt(awAfter)} Ω。`,
+      [changed.id],
+    );
+    if (dV !== 'unchanged') {
+      push(
+        'wiper-output',
+        'conclusion',
+        'potential-divider',
+        `The output p.d. across W–B ${DIR_EN[dV]} from ${fmt(vBefore)} V to ${fmt(vAfter)} V because V_WB = (R_WB / R_total) × V_AB.`,
+        `W–B 端输出电压由 ${fmt(vBefore)} V ${DIR_ZH[dV]}到 ${fmt(vAfter)} V，因为 U_WB = (R_WB / R_total) × U_AB。`,
+        [changed.id],
+      );
+    }
   }
 
   if (isCapacitor) {

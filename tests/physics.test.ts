@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { solveCircuit } from '@circuitlab/physics-engine';
 import { ldrIlluminanceForResistance, lampCurrent } from '@circuitlab/physics-engine';
+import { parseCircuitJSON, serializeCircuit } from '@circuitlab/circuit-core';
 import { buildDoc, compId, SERIES_LDR } from './helpers';
 
 const near = (actual: number, expected: number, digits = 6) =>
@@ -392,5 +393,85 @@ describe('LDR and thermistor models', () => {
     expect(sWarm.components[compId(warm, 1)].voltageMagnitude).toBeLessThan(
       sCold.components[compId(cold, 1)].voltageMagnitude,
     );
+  });
+});
+
+
+describe('three-terminal sliding rheostat', () => {
+  const divider = (wiper: number) =>
+    buildDoc(
+      [
+        { kind: 'cell', params: { emf: 12 } },
+        { kind: 'potentiometer', params: { resistance: 100, wiper } },
+        { kind: 'voltmeter' },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+        [1, 'w', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'Potential divider',
+    );
+
+  it('divides the supply p.d. in proportion to the wiper position', () => {
+    const doc = divider(0.25);
+    const solution = solveCircuit(doc);
+    expect(solution.ok).toBe(true);
+    const rp = solution.components[compId(doc, 1)];
+    const voltmeter = solution.components[compId(doc, 2)];
+    expect(rp.extra?.wiperFraction).toBeCloseTo(0.25, 6);
+    expect(rp.extra?.resistanceAW).toBeCloseTo(75, 6);
+    expect(rp.extra?.resistanceWB).toBeCloseTo(25, 6);
+    expect(rp.extra?.wiperVoltage).toBeCloseTo(3, 2);
+    expect(voltmeter.voltageMagnitude).toBeCloseTo(3, 2);
+    expect(rp.currentMagnitude).toBeCloseTo(0.12, 4);
+  });
+
+  it('uses only the A–W section in a two-terminal connection', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 12 } },
+        { kind: 'potentiometer', params: { resistance: 100, wiper: 0.25 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'w', 0, 'neg'],
+      ],
+      'Two-wire rheostat',
+    );
+    const solution = solveCircuit(doc);
+    const rp = solution.components[compId(doc, 1)];
+    expect(rp.extra?.resistanceAW).toBeCloseTo(75, 6);
+    expect(rp.currentMagnitude).toBeCloseTo(12 / 75, 4);
+    expect(rp.voltageMagnitude).toBeCloseTo(12, 4);
+  });
+
+  it('uses the whole track when the wiper is left unconnected', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 12 } },
+        { kind: 'potentiometer', params: { resistance: 100, wiper: 0.25 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+      'Track only',
+    );
+    const solution = solveCircuit(doc);
+    const rp = solution.components[compId(doc, 1)];
+    expect(rp.currentMagnitude).toBeCloseTo(0.12, 4);
+    expect(rp.voltageMagnitude).toBeCloseTo(12, 4);
+    expect(rp.resistance).toBeCloseTo(100, 6);
+  });
+
+  it('round-trips both track resistance and wiper through JSON', () => {
+    const doc = divider(0.25);
+    const parsed = parseCircuitJSON(serializeCircuit(doc));
+    expect(parsed.ok).toBe(true);
+    const rp = parsed.doc?.components.find((comp) => comp.kind === 'potentiometer');
+    expect(rp?.params.resistance).toBe(100);
+    expect(rp?.params.wiper).toBe(0.25);
   });
 });

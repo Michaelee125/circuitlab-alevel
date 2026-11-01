@@ -18,10 +18,10 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **63 passed**
-- Desktop e2e: **18 passed** (`desktop-chromium`, includes the smoke test)
+- Unit/physics/reasoning/teaching/routing tests: **68 passed**
+- Desktop e2e: **19 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **39 passed**, 57 intentionally skipped
+- Total Playwright: **40 passed**, 60 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -101,6 +101,14 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - A stale or malformed manual route (for example after moving a component) is ignored and the automatic route is used instead.
 - The Properties rail shows a "Selected wire" card with the manual/automatic state, a Reset-route action and Delete.
 - Coverage: unit tests for manual routes, JSON round-trip, invalid-route fallback, stale routes and editable segments; a Playwright test drags a wire, resets it and deletes it.
+
+## Three-terminal sliding rheostat (twelfth review)
+
+- Added a distinct 3-terminal `potentiometer` kind ("Sliding rheostat" / 滑动变阻器) alongside the existing 2-terminal `variable-resistor`, now named "Adjustable resistor" / 可调电阻. Both remain in the component library with separate names, glyphs, descriptions and inspectors.
+- The new component has terminals A, B and a wiper W. The solver stamps two track sections sharing the wiper node (`R_AW=(1−f)R`, `R_WB=fR`), uses only the A–W or W–B section when one end is unconnected, and falls back to the full track when the wiper is unconnected. Results expose the wiper p.d., wiper current and both section resistances.
+- Schematic and realistic renderers draw the three-terminal symbol and wiper; the inspector adds a wiper-position slider (0 % at B, 100 % at A) and potential-divider output cards with the formula. The reasoning engine explains wiper changes with section resistances and `V_WB = (R_WB/R_total)·V_AB`.
+- Router fix: endpoint component bodies are now avoided as well, so a wiper wire cannot run back through its own rheostat.
+- Tests: potential-divider, two-wire, full-track and JSON round-trip cases; a reasoning test; an e2e library/inspector test. 68 unit / 40 Playwright checks.
 
 ## Known limitations
 

@@ -41,6 +41,15 @@ function Glyph({ kind }: { kind: ComponentKind }) {
           <path d="M16 25l16-16M32 9l1.5 1M32 9l-1 1.5" {...common} />
         </>
       )}
+      {kind === 'potentiometer' && (
+        <>
+          <path d="M2 17h9M37 17h9" {...common} />
+          <rect x="11" y="12" width="26" height="10" rx="1.5" {...common} />
+          <path d="M24 3v9" {...common} />
+          <path d="M20.5 8L24 11.5 27.5 8" {...common} />
+          <circle cx="24" cy="3" r="1.6" fill={stroke} stroke="none" />
+        </>
+      )}
       {kind === 'lamp' && (
         <>
           <path d="M2 15h13M33 15h13" {...common} />

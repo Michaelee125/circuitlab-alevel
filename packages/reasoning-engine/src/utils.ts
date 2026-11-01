@@ -66,6 +66,8 @@ export function componentResistance(comp: ComponentInstance): number | null {
     case 'resistor':
     case 'variable-resistor':
       return comp.params.resistance ?? 10;
+    case 'potentiometer':
+      return comp.params.resistance ?? 100;
     case 'ldr':
       return ldrResistance(comp.params);
     case 'thermistor':
@@ -162,6 +164,7 @@ export interface ParamChange {
 
 const PHYSICS_KEYS = new Set([
   'resistance',
+  'wiper',
   'emf',
   'internalResistance',
   'closed',

@@ -111,16 +111,25 @@ const emptySolution = (topology: Topology, status: SolveStatus, message?: Solver
   topology,
 });
 
-function terminalNodes(
-  topology: Topology,
-  comp: ComponentInstance,
-): [string | undefined, string | undefined] {
+interface TerminalNodes {
+  a?: string;
+  b?: string;
+  w?: string;
+}
+
+function terminalNodes(topology: Topology, comp: ComponentInstance): TerminalNodes {
   const def = getComponentDef(comp.kind);
+  const nodeOf = (terminalId: string) =>
+    topology.nodeOfPin[pinKey(comp.id, terminalId)];
+  if (comp.kind === 'potentiometer') {
+    return { a: nodeOf('a'), b: nodeOf('b'), w: nodeOf('w') };
+  }
   const [a, b] = def.terminals;
-  return [
-    topology.nodeOfPin[pinKey(comp.id, a.id)],
-    topology.nodeOfPin[pinKey(comp.id, b.id)],
-  ];
+  return { a: nodeOf(a.id), b: nodeOf(b.id) };
+}
+
+function wiredNodes(nodes: TerminalNodes): string[] {
+  return [nodes.a, nodes.b, nodes.w].filter((node): node is string => Boolean(node));
 }
 
 function sourceTerminals(comp: ComponentInstance): { neg: string; pos: string } {
@@ -153,11 +162,18 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
     adjacency.get(b)?.add(a);
   };
 
-  const compNodes = new Map<string, { a?: string; b?: string }>();
+  const compNodes = new Map<string, TerminalNodes>();
   for (const comp of doc.components) {
-    const [a, b] = terminalNodes(topology, comp);
-    compNodes.set(comp.id, { a, b });
-    if (conductsDC(comp)) connect(a, b);
+    const nodes = terminalNodes(topology, comp);
+    compNodes.set(comp.id, nodes);
+    if (comp.kind === 'potentiometer') {
+      const wired = wiredNodes(nodes);
+      for (let i = 0; i < wired.length; i += 1) {
+        for (let j = i + 1; j < wired.length; j += 1) connect(wired[i], wired[j]);
+      }
+    } else if (conductsDC(comp)) {
+      connect(nodes.a, nodes.b);
+    }
   }
   if (options.probe) connect(options.probe.nodeA, options.probe.nodeB);
 
@@ -184,10 +200,11 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
   }
 
   for (const comp of doc.components) {
-    const nodes = compNodes.get(comp.id);
-    if (!nodes?.a || !nodes?.b) continue;
-    const islandId = islandOfNode.get(nodes.a);
-    if (islandId === undefined || islandId !== islandOfNode.get(nodes.b)) continue;
+    const wired = wiredNodes(compNodes.get(comp.id) ?? {});
+    if (wired.length < 2) continue;
+    const islandId = islandOfNode.get(wired[0]);
+    if (islandId === undefined) continue;
+    if (wired.some((node) => islandOfNode.get(node) !== islandId)) continue;
     islands[islandId].components.push(comp);
     if (isSource(comp.kind)) islands[islandId].hasSource = true;
   }
@@ -331,10 +348,12 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
       };
 
       for (const comp of islandComponents) {
-        const { a: nodeA, b: nodeB } = compNodes.get(comp.id) ?? {};
+        const { a: nodeA, b: nodeB, w: nodeW } = compNodes.get(comp.id) ?? {};
+        const wired = [nodeA, nodeB, nodeW].filter((node): node is string => Boolean(node));
+        if (wired.length < 2) continue;
         const ia = idxOf(nodeA);
         const ib = idxOf(nodeB);
-        if (ia === -1 && ib === -1) continue;
+        const iw = idxOf(nodeW);
 
         switch (comp.kind) {
           case 'cell':
@@ -360,6 +379,21 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
             const i0 = diodeCurrent(v, isat, n) - g * v;
             addG(ia, ib, g);
             addI(ia, ib, i0);
+            break;
+          }
+          case 'potentiometer': {
+            const total = Math.max(0.01, comp.params.resistance ?? 100);
+            const fraction = Math.min(1, Math.max(0, comp.params.wiper ?? 0.5));
+            // `wiper` is measured from terminal B: 0 = at B, 1 = at A.
+            const rAW = Math.max(1e-3, (1 - fraction) * total);
+            const rWB = Math.max(1e-3, fraction * total);
+            if (nodeW) {
+              if (nodeA) addG(ia, iw, 1 / rAW);
+              if (nodeB) addG(iw, ib, 1 / rWB);
+            } else if (nodeA && nodeB) {
+              // No wiper connection: the full track behaves as a two-terminal resistor.
+              addG(ia, ib, 1 / total);
+            }
             break;
           }
           case 'capacitor': {
@@ -511,14 +545,72 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
     // ---- passive readings ------------------------------------------------
     for (const comp of islandComponents) {
       if (isSource(comp.kind)) continue;
-      const { a: nodeA, b: nodeB } = compNodes.get(comp.id) ?? {};
-      if (!nodeA || !nodeB) continue;
+      const { a: nodeA, b: nodeB, w: nodeW } = compNodes.get(comp.id) ?? {};
+      const wired = [nodeA, nodeB, nodeW].filter((node): node is string => Boolean(node));
+      if (wired.length < 2) continue;
       const ia = idxOf(nodeA);
       const ib = idxOf(nodeB);
-      if (ia === -1 && ib === -1) {
+      if (ia === -1 && ib === -1 && idxOf(nodeW) === -1) {
         readings.set(comp.id, zeroReading(comp));
         continue;
       }
+      if (comp.kind === 'potentiometer') {
+        const total = Math.max(0.01, comp.params.resistance ?? 100);
+        const fraction = Math.min(1, Math.max(0, comp.params.wiper ?? 0.5));
+        const rAW = Math.max(1e-3, (1 - fraction) * total);
+        const rWB = Math.max(1e-3, fraction * total);
+        const va = nodeA ? volts.get(nodeA) ?? 0 : undefined;
+        const vb = nodeB ? volts.get(nodeB) ?? 0 : undefined;
+        const vw = nodeW ? volts.get(nodeW) ?? 0 : undefined;
+        let current = 0;
+        let voltage = 0;
+        if (va !== undefined && vw !== undefined) {
+          current = (va - vw) / rAW;
+          voltage = vb !== undefined ? va - vb : va - vw;
+        } else if (vb !== undefined && vw !== undefined) {
+          current = (vw - vb) / rWB;
+          voltage = vw - vb;
+        } else if (va !== undefined && vb !== undefined) {
+          current = (va - vb) / total;
+          voltage = va - vb;
+        }
+        const wiperVoltage =
+          vw !== undefined && vb !== undefined
+            ? vw - vb
+            : vw !== undefined && va !== undefined
+              ? vw - va
+              : 0;
+        const wiperCurrent =
+          va !== undefined && vw !== undefined && vb !== undefined
+            ? (va - vw) / rAW - (vw - vb) / rWB
+            : 0;
+        const power =
+          va !== undefined && vw !== undefined && vb !== undefined
+            ? (va - vw) ** 2 / rAW + (vw - vb) ** 2 / rWB
+            : current ** 2 * (va !== undefined && vw !== undefined ? rAW : rWB);
+        readings.set(comp.id, {
+          componentId: comp.id,
+          kind: comp.kind,
+          label: comp.label ?? getComponentDef(comp.kind).name,
+          current,
+          voltage,
+          power,
+          currentMagnitude: Math.abs(current),
+          voltageMagnitude: Math.abs(voltage),
+          resistance: total,
+          valid: true,
+          extra: {
+            wiperFraction: fraction,
+            wiperVoltage,
+            wiperCurrent,
+            resistanceAW: rAW,
+            resistanceWB: rWB,
+            totalResistance: total,
+          },
+        });
+        continue;
+      }
+      if (!nodeA || !nodeB) continue;
       const va = volts.get(nodeA) ?? 0;
       const vb = volts.get(nodeB) ?? 0;
       const voltage = va - vb;
@@ -580,12 +672,13 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
   // ---- components that could not be placed in an island ------------------
   for (const comp of doc.components) {
     if (readings.has(comp.id)) continue;
-    const { a, b } = compNodes.get(comp.id) ?? {};
-    if (a && b) {
+    const nodes = compNodes.get(comp.id) ?? {};
+    const wired = wiredNodes(nodes);
+    if (wired.length >= 2) {
       // The component bridges two separately-referenced networks (for example an
       // open switch). No current flows; the p.d. follows the conventional
       // floating-island reference used for display.
-      const voltage = (nodeVoltages[a] ?? 0) - (nodeVoltages[b] ?? 0);
+      const voltage = (nodeVoltages[wired[0]] ?? 0) - (nodeVoltages[wired[1]] ?? 0);
       readings.set(comp.id, {
         ...zeroReading(comp),
         voltage,
@@ -596,14 +689,14 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
     } else {
       readings.set(comp.id, { ...zeroReading(comp), valid: false });
     }
-    if (!a || !b) {
+    if (wired.length < 2) {
       warnings.push({
         code: 'unconnected-terminal',
-        message: `${comp.label ?? getComponentDef(comp.kind).name} has an unconnected terminal, so no current can flow through it.`,
+        message: `${comp.label ?? getComponentDef(comp.kind).name} has fewer than two connected terminals, so no current can flow through it.`,
         severity: 'warning',
         componentIds: [comp.id],
       });
-    } else if (islandOfNode.get(a) !== islandOfNode.get(b)) {
+    } else if (wired.some((node) => islandOfNode.get(node) !== islandOfNode.get(wired[0]))) {
       warnings.push({
         code: 'terminal-not-common',
         message: `${comp.label ?? getComponentDef(comp.kind).name} is the only link between two separate parts of the circuit, so no steady current can flow through it.`,

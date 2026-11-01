@@ -108,6 +108,8 @@ export function linearResistance(comp: ComponentInstance): number | null {
     case 'resistor':
     case 'variable-resistor':
       return Math.max(0.01, comp.params.resistance ?? 10);
+    case 'potentiometer':
+      return Math.max(0.01, comp.params.resistance ?? 100);
     case 'ldr':
       return Math.max(0.01, ldrResistance(comp.params));
     case 'thermistor':

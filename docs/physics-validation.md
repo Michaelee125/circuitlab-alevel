@@ -44,6 +44,7 @@ All SI (V, A, Ω, F, W, s). Numbers are checked with `toBeCloseTo(…, 3)` or
 | Component | Model | Notes |
 | --- | --- | --- |
 | resistor, variable resistor | `I = V/R` | `R ∈ [0.01, 10⁹] Ω` |
+| sliding rheostat (3-terminal) | two sections `R_AW=(1−f)R`, `R_WB=fR` sharing the wiper node; unconnected wiper ⇒ full track `R` | `V_WB = (R_WB/R_total)·V_AB` when unloaded |
 | LDR | `R = R_ref (10 lx / E)^γ`, defaults `R_ref=100 Ω`, `γ=0.7` | light ↑ ⇒ R ↓ |
 | NTC thermistor | `R = R₂₅ exp(B(1/T − 1/T₂₅))`, `R₂₅=1 kΩ`, `B=3500 K` | temperature ↑ ⇒ R ↓ |
 | filament lamp | `I(V) = V / (R₀(1 + k|V|))` | smooth, odd, strictly increasing, always dissipative |

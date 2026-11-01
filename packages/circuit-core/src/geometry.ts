@@ -65,7 +65,10 @@ export function componentTerminals(comp: ComponentInstance): (TerminalDef & Poin
 export function terminalNormal(comp: ComponentInstance, terminalId: string): Point {
   const def = getTerminalDef(comp, terminalId);
   if (!def) return { x: 1, y: 0 };
-  const local = { x: def.x > 0 ? 1 : -1, y: 0 };
+  const vertical = Math.abs(def.y) > Math.abs(def.x);
+  const local = vertical
+    ? { x: 0, y: def.y >= 0 ? 1 : -1 }
+    : { x: def.x >= 0 ? 1 : -1, y: 0 };
   return rotateVector(local, comp.rotation);
 }
 
@@ -555,7 +558,8 @@ export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
     // drag), fall back to a visibility-graph route that goes around bodies.
     const bodies: Rect[] = [];
     for (const comp of doc.components) {
-      if (comp.id === wire.from.componentId || comp.id === wire.to.componentId) continue;
+      // Include the wire's own components too: a wire leaving a wiper must not
+      // run back through its own body on the way to a target on the far side.
       const b = componentBounds(comp);
       bodies.push({ x: b.x - 4, y: b.y - 4, width: b.width + 8, height: b.height + 8 });
     }

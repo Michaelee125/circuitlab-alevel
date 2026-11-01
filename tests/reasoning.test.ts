@@ -410,6 +410,37 @@ describe('general reasoning coverage', () => {
     expect(text).toContain('lights up');
   });
 
+  it('explains a potential-divider wiper change with section resistances', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 12 } },
+        { kind: 'potentiometer', params: { resistance: 100, wiper: 0.5 } },
+        { kind: 'voltmeter' },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+        [1, 'w', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'Potential divider',
+    );
+    const after = withParam(before, 1, { wiper: 0.25 });
+    const result = explainPair(before, after);
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).toBe('network-potentiometer');
+    const text = result.answer.en;
+    expect(text).toContain('The wiper of RP1 is moved towards B');
+    expect(text).toContain('W–B section');
+    expect(text).toContain('A–W section');
+    expect(text).toContain('V_WB');
+    expect(text).toContain('3.00 V');
+    expect(text).toContain('6.00 V');
+    const ids = result.steps.map((step) => step.id);
+    expect(ids).toContain('wiper-sections');
+    expect(ids).toContain('wiper-output');
+  });
+
   it('explains a capacitance change as a transient effect only', () => {
     const before = buildDoc(
       [

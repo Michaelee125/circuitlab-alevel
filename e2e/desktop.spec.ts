@@ -223,6 +223,14 @@ test.describe('CircuitLab desktop', () => {
     await expect(state(page)).toHaveAttribute('data-wires', '5');
   });
 
+  test('distinguishes the two- and three-terminal variable components', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Adjustable resistor' }).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Sliding rheostat' }).first().click();
+    await expect(state(page)).toHaveAttribute('data-components', '1');
+    await expect(page.getByText('Wiper position (from B)')).toBeVisible();
+    await expect(page.getByText('Three-terminal sliding rheostat')).toBeVisible();
+  });
+
   test('shows live component values beside the symbols', async ({ page }) => {
     await loadExperiment(page, 'LDR circuit');
     await expect(state(page)).toHaveAttribute('data-show-values', 'false');

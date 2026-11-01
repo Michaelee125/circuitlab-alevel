@@ -379,6 +379,7 @@ export class CircuitRenderer {
         !state.showValues &&
         (comp.kind === 'resistor' ||
           comp.kind === 'variable-resistor' ||
+          comp.kind === 'potentiometer' ||
           comp.kind === 'ldr' ||
           comp.kind === 'thermistor' ||
           comp.kind === 'capacitor' ||
@@ -396,7 +397,10 @@ export class CircuitRenderer {
       });
       text.anchor.set(0.5, 0);
       const bounds = componentBounds(comp);
-      text.position.set(comp.x, bounds.y + bounds.height + 6);
+      // The potentiometer box includes the wiper terminal above the body, so
+      // its label sits just below the ceramic track instead of the box edge.
+      const labelBase = comp.kind === 'potentiometer' ? comp.y + 26 : bounds.y + bounds.height + 6;
+      text.position.set(comp.x, labelBase);
       this.labelRoot.addChild(text);
       if (showValue) {
         const value = this.valueLabel(comp);
@@ -406,7 +410,7 @@ export class CircuitRenderer {
             style: { fontFamily: MONO, fontSize: 9.5, fontWeight: '500', fill: this.palette.muted },
           });
           valueText.anchor.set(0.5, 0);
-          valueText.position.set(comp.x, bounds.y + bounds.height + 19);
+          valueText.position.set(comp.x, labelBase + 13);
           this.labelRoot.addChild(valueText);
         }
       }
@@ -421,6 +425,8 @@ export class CircuitRenderer {
       case 'resistor':
       case 'variable-resistor':
         return formatQuantity(comp.params.resistance ?? 0, 'resistance');
+      case 'potentiometer':
+        return `${formatQuantity(comp.params.resistance ?? 0, 'resistance')} · ${Math.round((comp.params.wiper ?? 0.5) * 100)}%`;
       case 'ldr':
         return `${formatQuantity(this.ldrOhms(comp), 'resistance')}`;
       case 'thermistor':

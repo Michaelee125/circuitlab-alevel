@@ -29,6 +29,7 @@ function sanitizeParams(kind: ComponentInstance['kind'], raw: unknown): Componen
   const merged: ComponentParams = { ...defaults };
 
   if ('resistance' in defaults) merged.resistance = num(input.resistance, defaults.resistance ?? 10, 0.01, 1e9);
+  if ('wiper' in defaults) merged.wiper = num(input.wiper, defaults.wiper ?? 0.5, 0, 1);
   if ('emf' in defaults) merged.emf = num(input.emf, defaults.emf ?? 6, 0, 1e6);
   if ('internalResistance' in defaults)
     merged.internalResistance = num(input.internalResistance, defaults.internalResistance ?? 0, 0, 1e9);

@@ -102,6 +102,14 @@ export function drawSchematicBody(g: Graphics, comp: ComponentInstance, palette:
       line(g, [[-20, 20], [20, -20]], stroke, 2);
       arrowHead(g, [22, -22], [-20, 20], stroke, 8);
       break;
+    case 'potentiometer':
+      lead(g, -52, -28, palette, 2);
+      lead(g, 28, 52, palette, 2);
+      rect(g, -28, -11, 56, 22, 2, palette.body, 0.85, stroke, 2);
+      // wiper lead from the third terminal down to the track
+      line(g, [[0, -40], [0, -18]], stroke, 2);
+      arrowHead(g, [0, -12], [0, -24], stroke, 8);
+      break;
     case 'lamp':
       lead(g, -52, -20, palette, 2);
       lead(g, 20, 52, palette, 2);
@@ -380,6 +388,49 @@ export function drawRealisticBody(
           .stroke({ width: 0.8, color: shade(palette.metalDark, -0.3), alpha: 0.7 });
       }
       g.circle(-2.4, -27, 1.8).fill({ color: 0xffffff, alpha: 0.6 });
+      glossStreak(g, -22, -10, 42, 3.2);
+      rimHighlight(g, -26, -13, 52, 26, 8);
+      break;
+    }
+    case 'potentiometer': {
+      softShadow(g, palette);
+      metalLead(g, -52, -31, palette);
+      metalLead(g, 31, 52, palette);
+      g.roundRect(-26, -13, 52, 26, 8)
+        .fill(
+          linearFill([
+            [0, shade(palette.ceramic, 0.5)],
+            [0.5, palette.ceramic],
+            [1, shade(palette.ceramic, -0.3)],
+          ]),
+        )
+        .stroke({ width: 0.9, color: shade(palette.ceramicDark, -0.15), alpha: 0.9 });
+      [0x4a2f16, 0x141414, 0xb02a2a].forEach((color, index) => {
+        g.rect(-16 + index * 12, -13, 5, 26).fill(color);
+      });
+      // wiper post from the top terminal to the track
+      g.roundRect(-2.4, -40, 4.8, 30, 2).fill(
+        linearFill(
+          [
+            [0, shade(palette.metalDark, -0.2)],
+            [0.35, palette.metal],
+            [1, shade(palette.metalDark, -0.3)],
+          ],
+          false,
+        ),
+      );
+      g.roundRect(-9, -31, 18, 7, 3).fill(
+        linearFill([
+          [0, shade(palette.metal, 0.5)],
+          [1, shade(palette.metalDark, -0.1)],
+        ]),
+      );
+      g.circle(0, -34, 4.5).fill(
+        radialFill([
+          [0, shade(palette.metal, 0.7)],
+          [1, shade(palette.metalDark, -0.25)],
+        ]),
+      );
       glossStreak(g, -22, -10, 42, 3.2);
       rimHighlight(g, -26, -13, 52, 26, 8);
       break;

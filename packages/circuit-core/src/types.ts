@@ -10,6 +10,7 @@ export type ComponentKind =
   | 'battery'
   | 'resistor'
   | 'variable-resistor'
+  | 'potentiometer'
   | 'lamp'
   | 'switch'
   | 'ammeter'
@@ -30,8 +31,10 @@ export type Rotation = 0 | 90 | 180 | 270;
 
 /** Physical parameters of a component. Values are SI unless the field says otherwise. */
 export interface ComponentParams {
-  /** Resistance in ohms (resistor / variable resistor). */
+  /** Resistance in ohms (resistor / variable resistor / potentiometer track). */
   resistance?: number;
+  /** Wiper position of a potentiometer track, 0…1 (0 = terminal A, 1 = terminal B). */
+  wiper?: number;
   /** Electromotive force in volts (cell / battery). */
   emf?: number;
   /** Internal resistance in ohms (cell / battery). */
