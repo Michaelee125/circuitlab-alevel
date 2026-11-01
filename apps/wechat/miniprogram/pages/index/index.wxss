@@ -1,0 +1,31 @@
+.fallback {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  box-sizing: border-box;
+}
+.fallback-card {
+  border: 1rpx solid rgba(56, 232, 255, 0.24);
+  background: rgba(11, 25, 41, 0.9);
+  border-radius: 28rpx;
+  padding: 48rpx 36rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+.title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #e8f4ff;
+}
+.body {
+  font-size: 28rpx;
+  color: #b7d3e8;
+}
+.hint {
+  font-size: 24rpx;
+  color: #7d9ab4;
+  line-height: 1.6;
+}

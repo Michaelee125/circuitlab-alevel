@@ -1,0 +1,276 @@
+import { getComponentDef } from './defs';
+import type {
+  CircuitDocument,
+  ComponentInstance,
+  Point,
+  Rotation,
+  TerminalDef,
+  Wire,
+} from './types';
+
+export const GRID = 20;
+
+export function snap(value: number, grid = GRID): number {
+  return Math.round(value / grid) * grid;
+}
+
+export function snapPoint(p: Point, grid = GRID): Point {
+  return { x: snap(p.x, grid), y: snap(p.y, grid) };
+}
+
+const ROTATION_COS: Record<Rotation, number> = {
+  0: 1,
+  90: 0,
+  180: -1,
+  270: 0,
+};
+const ROTATION_SIN: Record<Rotation, number> = {
+  0: 0,
+  90: 1,
+  180: 0,
+  270: -1,
+};
+
+/** Rotate a local vector clockwise (screen coordinates, y down). */
+export function rotateVector(p: Point, rotation: Rotation): Point {
+  const c = ROTATION_COS[rotation] ?? 1;
+  const s = ROTATION_SIN[rotation] ?? 0;
+  return { x: p.x * c - p.y * s, y: p.x * s + p.y * c };
+}
+
+export function rotatePointAround(p: Point, origin: Point, rotation: Rotation): Point {
+  const v = rotateVector({ x: p.x - origin.x, y: p.y - origin.y }, rotation);
+  return { x: origin.x + v.x, y: origin.y + v.y };
+}
+
+/** World position of a terminal. */
+export function terminalWorld(comp: ComponentInstance, terminal: TerminalDef): Point {
+  const v = rotateVector({ x: terminal.x, y: terminal.y }, comp.rotation);
+  return { x: comp.x + v.x, y: comp.y + v.y };
+}
+
+export function getTerminalDef(comp: ComponentInstance, terminalId: string): TerminalDef | undefined {
+  return getComponentDef(comp.kind).terminals.find((t) => t.id === terminalId);
+}
+
+/** All terminals of a component in world coordinates. */
+export function componentTerminals(comp: ComponentInstance): (TerminalDef & Point)[] {
+  return getComponentDef(comp.kind).terminals.map((t) => ({
+    ...t,
+    ...terminalWorld(comp, t),
+  }));
+}
+
+/** Outward direction a wire should leave a terminal with. */
+export function terminalNormal(comp: ComponentInstance, terminalId: string): Point {
+  const def = getTerminalDef(comp, terminalId);
+  if (!def) return { x: 1, y: 0 };
+  const local = { x: def.x > 0 ? 1 : -1, y: 0 };
+  return rotateVector(local, comp.rotation);
+}
+
+function dedupeCollinear(points: Point[]): Point[] {
+  const out: Point[] = [];
+  for (const p of points) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last.x - p.x) < 0.01 && Math.abs(last.y - p.y) < 0.01) continue;
+    out.push(p);
+  }
+  for (let i = out.length - 2; i >= 1; i -= 1) {
+    const a = out[i - 1];
+    const b = out[i];
+    const c = out[i + 1];
+    const collinearX = Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - c.x) < 0.01;
+    const collinearY = Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - c.y) < 0.01;
+    if (collinearX || collinearY) out.splice(i, 1);
+  }
+  return out;
+}
+
+/**
+ * Orthogonal wire route between two terminals. The route leaves each terminal
+ * perpendicular to its component body so wires never overlap the symbol.
+ */
+export function wirePath(
+  from: Point,
+  fromNormal: Point,
+  to: Point,
+  toNormal: Point,
+  stub = 22,
+): Point[] {
+  const a1 = { x: from.x + fromNormal.x * stub, y: from.y + fromNormal.y * stub };
+  const b1 = { x: to.x + toNormal.x * stub, y: to.y + toNormal.y * stub };
+  const fromHorizontal = Math.abs(fromNormal.x) >= Math.abs(fromNormal.y);
+  const toHorizontal = Math.abs(toNormal.x) >= Math.abs(toNormal.y);
+  // Long connections between two horizontal terminals are routed below the
+  // component row so the wire does not run through the symbols between them.
+  if (
+    fromHorizontal &&
+    toHorizontal &&
+    Math.abs(from.x - to.x) > 280 &&
+    Math.abs(from.y - to.y) < 48
+  ) {
+    const laneY = Math.max(from.y, to.y) + 170;
+    return dedupeCollinear([
+      from,
+      a1,
+      { x: a1.x, y: laneY },
+      { x: b1.x, y: laneY },
+      b1,
+      to,
+    ]);
+  }
+  const pts: Point[] = [from, a1];
+  if (fromHorizontal && toHorizontal) {
+    const midX = (a1.x + b1.x) / 2;
+    pts.push({ x: midX, y: a1.y }, { x: midX, y: b1.y });
+  } else if (!fromHorizontal && !toHorizontal) {
+    const midY = (a1.y + b1.y) / 2;
+    pts.push({ x: a1.x, y: midY }, { x: b1.x, y: midY });
+  } else if (fromHorizontal) {
+    pts.push({ x: b1.x, y: a1.y });
+  } else {
+    pts.push({ x: a1.x, y: b1.y });
+  }
+  pts.push(b1, to);
+  return dedupeCollinear(pts);
+}
+
+export function wireEndpoints(
+  doc: CircuitDocument,
+  wire: Wire,
+): { from: Point; to: Point } | null {
+  const a = doc.components.find((c) => c.id === wire.from.componentId);
+  const b = doc.components.find((c) => c.id === wire.to.componentId);
+  if (!a || !b) return null;
+  const ta = getTerminalDef(a, wire.from.terminalId);
+  const tb = getTerminalDef(b, wire.to.terminalId);
+  if (!ta || !tb) return null;
+  return { from: terminalWorld(a, ta), to: terminalWorld(b, tb) };
+}
+
+/** Full polyline for a wire, including the routing stubs. */
+export function wirePolyline(doc: CircuitDocument, wire: Wire): Point[] {
+  const a = doc.components.find((c) => c.id === wire.from.componentId);
+  const b = doc.components.find((c) => c.id === wire.to.componentId);
+  if (!a || !b) return [];
+  const ta = getTerminalDef(a, wire.from.terminalId);
+  const tb = getTerminalDef(b, wire.to.terminalId);
+  if (!ta || !tb) return [];
+  return wirePath(
+    terminalWorld(a, ta),
+    terminalNormal(a, ta.id),
+    terminalWorld(b, tb),
+    terminalNormal(b, tb.id),
+  );
+}
+
+export function distance(a: Point, b: Point): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+export function distanceToSegment(p: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return distance(p, a);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export function componentBounds(comp: ComponentInstance): Rect {
+  const def = getComponentDef(comp.kind);
+  const half = comp.rotation === 90 || comp.rotation === 270
+    ? { w: def.height / 2, h: def.width / 2 }
+    : { w: def.width / 2, h: def.height / 2 };
+  return {
+    x: comp.x - half.w,
+    y: comp.y - half.h,
+    width: half.w * 2,
+    height: half.h * 2,
+  };
+}
+
+export function documentBounds(doc: CircuitDocument): Rect {
+  if (doc.components.length === 0) return { x: -200, y: -150, width: 400, height: 300 };
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const comp of doc.components) {
+    for (const t of componentTerminals(comp)) {
+      minX = Math.min(minX, t.x);
+      maxX = Math.max(maxX, t.x);
+      minY = Math.min(minY, t.y);
+      maxY = Math.max(maxY, t.y);
+    }
+    const b = componentBounds(comp);
+    minX = Math.min(minX, b.x);
+    maxX = Math.max(maxX, b.x + b.width);
+    minY = Math.min(minY, b.y);
+    maxY = Math.max(maxY, b.y + b.height);
+  }
+  const pad = 60;
+  return {
+    x: minX - pad,
+    y: minY - pad,
+    width: maxX - minX + pad * 2,
+    height: maxY - minY + pad * 2,
+  };
+}
+
+/** Hit test a component body; returns the topmost match. */
+export function componentAt(doc: CircuitDocument, p: Point, tolerance = 6): ComponentInstance | null {
+  for (let i = doc.components.length - 1; i >= 0; i -= 1) {
+    const comp = doc.components[i];
+    // inverse-rotate the point into the component's local frame
+    const local = rotateVector({ x: p.x - comp.x, y: p.y - comp.y }, (360 - comp.rotation) % 360 as Rotation);
+    const def = getComponentDef(comp.kind);
+    if (
+      Math.abs(local.x) <= def.width / 2 + tolerance &&
+      Math.abs(local.y) <= def.height / 2 + tolerance
+    ) {
+      return comp;
+    }
+  }
+  return null;
+}
+
+export interface TerminalHit {
+  componentId: string;
+  terminalId: string;
+  point: Point;
+}
+
+export function terminalAt(doc: CircuitDocument, p: Point, radius = 18): TerminalHit | null {
+  let best: TerminalHit | null = null;
+  let bestDist = radius;
+  for (const comp of doc.components) {
+    for (const t of componentTerminals(comp)) {
+      const d = distance(p, t);
+      if (d <= bestDist) {
+        bestDist = d;
+        best = { componentId: comp.id, terminalId: t.id, point: { x: t.x, y: t.y } };
+      }
+    }
+  }
+  return best;
+}
+
+export function wireAt(doc: CircuitDocument, p: Point, tolerance = 10): Wire | null {
+  for (let i = doc.wires.length - 1; i >= 0; i -= 1) {
+    const poly = wirePolyline(doc, doc.wires[i]);
+    for (let j = 0; j < poly.length - 1; j += 1) {
+      if (distanceToSegment(p, poly[j], poly[j + 1]) <= tolerance) return doc.wires[i];
+    }
+  }
+  return null;
+}

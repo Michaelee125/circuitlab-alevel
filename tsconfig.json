@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "allowImportingTsExtensions": false,
+    "noEmit": true,
+    "types": ["vite/client", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@circuitlab/circuit-core": ["packages/circuit-core/src/index.ts"],
+      "@circuitlab/physics-engine": ["packages/physics-engine/src/index.ts"],
+      "@circuitlab/reasoning-engine": ["packages/reasoning-engine/src/index.ts"],
+      "@circuitlab/teaching-engine": ["packages/teaching-engine/src/index.ts"],
+      "@circuitlab/circuit-renderer": ["packages/circuit-renderer/src/index.ts"],
+      "@circuitlab/ui": ["packages/ui/src/index.ts"],
+      "@circuitlab/i18n": ["packages/i18n/src/index.ts"],
+      "@circuitlab/platform-adapters": ["packages/platform-adapters/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src",
+    "apps/web/src",
+    "apps/web/vite.config.ts",
+    "tests",
+    "e2e",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
+}

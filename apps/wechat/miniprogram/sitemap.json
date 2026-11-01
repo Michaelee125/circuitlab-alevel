@@ -1,0 +1,9 @@
+{
+  "desc": "CircuitLab Physics site map",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

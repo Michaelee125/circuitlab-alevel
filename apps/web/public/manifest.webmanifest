@@ -1,0 +1,18 @@
+{
+  "name": "CircuitLab Physics",
+  "short_name": "CircuitLab",
+  "description": "Interactive circuit laboratory with a physics reasoning engine for IGCSE and A-Level physics.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050b16",
+  "theme_color": "#050b16",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

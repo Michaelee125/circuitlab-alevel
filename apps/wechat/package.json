@@ -1,0 +1,7 @@
+{
+  "name": "@circuitlab/wechat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WeChat mini-program shell (Phase 2 scaffold) for CircuitLab Physics",
+  "scripts": {}
+}

@@ -1,0 +1,7 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# esbuild needs its platform binary in CI; allow its install script explicitly.
+onlyBuiltDependencies:
+  - esbuild

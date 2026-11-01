@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "pages/index/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "CircuitLab Physics",
+    "navigationBarBackgroundColor": "#050b16",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#050b16",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

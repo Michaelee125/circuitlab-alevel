@@ -1,0 +1,20 @@
+{
+  "description": "CircuitLab Physics — WeChat mini-program shell (Phase 2 scaffold, not published)",
+  "packOptions": { "ignore": [] },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "autoAudits": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "circuitlab-alevel",
+  "miniprogramRoot": "miniprogram/",
+  "condition": {}
+}

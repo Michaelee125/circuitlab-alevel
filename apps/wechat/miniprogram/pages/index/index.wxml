@@ -1,0 +1,8 @@
+<web-view wx:if="{{url && !failed}}" src="{{url}}" binderror="onWebViewError"></web-view>
+<view wx:else class="fallback">
+  <view class="fallback-card">
+    <text class="title">CircuitLab Physics</text>
+    <text class="body">The laboratory could not be loaded.</text>
+    <text class="hint">A registered HTTPS business domain is required for the web-view shell. See docs/wechat-mini-program.md.</text>
+  </view>
+</view>
