@@ -101,6 +101,7 @@ function CircuitDiagnostics() {
   const view = useCircuitStore((s) => s.view);
   const selectionId = useCircuitStore((s) => s.selectionId);
   const sheet = useCircuitStore((s) => s.mobileSheet);
+  const showValues = useCircuitStore((s) => s.showValues);
   return (
     <div
       hidden
@@ -120,6 +121,7 @@ function CircuitDiagnostics() {
       data-zoom={view.zoom}
       data-selection={selectionId ?? ''}
       data-sheet={sheet}
+      data-show-values={showValues ? 'true' : 'false'}
     />
   );
 }

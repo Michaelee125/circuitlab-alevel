@@ -73,6 +73,15 @@ interface Prefs {
 
 const PREF_KEY = 'circuitlab.prefs.v1';
 const PIN_KEY = 'circuitlab.explainPinned.v1';
+const VALUES_KEY = 'circuitlab.showValues.v1';
+
+function loadShowValues(): boolean {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(VALUES_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 
 function loadPinned(): boolean {
   try {
@@ -139,6 +148,7 @@ interface CircuitState {
   bottomOpen: boolean;
   mobileSheet: SheetKind;
   showGrid: boolean;
+  showValues: boolean;
   explainPinned: boolean;
   highlightIds: string[];
   transientInitialVoltage: number;
@@ -185,6 +195,8 @@ interface CircuitState {
   setBottomOpen: (open: boolean) => void;
   setSheet: (sheet: SheetKind) => void;
   setShowGrid: (show: boolean) => void;
+  setShowValues: (show: boolean) => void;
+  toggleValues: () => void;
   toggleExplainPinned: () => void;
   setHighlight: (ids: string[]) => void;
 
@@ -234,6 +246,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   bottomOpen: false,
   mobileSheet: 'none',
   showGrid: true,
+  showValues: loadShowValues(),
   explainPinned: loadPinned(),
   highlightIds: [],
   transientInitialVoltage: 0,
@@ -592,6 +605,17 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   setBottomOpen: (bottomOpen) => set({ bottomOpen }),
   setSheet: (mobileSheet) => set({ mobileSheet }),
   setShowGrid: (showGrid) => set({ showGrid }),
+
+  setShowValues: (showValues) => {
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(VALUES_KEY, String(showValues));
+    } catch {
+      // best-effort preference
+    }
+    set({ showValues });
+  },
+
+  toggleValues: () => get().setShowValues(!get().showValues),
 
   toggleExplainPinned: () =>
     set((state) => {

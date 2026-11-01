@@ -222,6 +222,28 @@ test.describe('CircuitLab desktop', () => {
     await expect(state(page)).toHaveAttribute('data-wires', '5');
   });
 
+  test('shows live component values beside the symbols', async ({ page }) => {
+    await loadExperiment(page, 'LDR circuit');
+    await expect(state(page)).toHaveAttribute('data-show-values', 'false');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const settings = page.locator('.settings-popover');
+    await expect(settings).toBeVisible();
+    await settings.getByRole('switch', { name: 'Show values' }).click();
+    await expect(state(page)).toHaveAttribute('data-show-values', 'true');
+    await expect(page.getByRole('button', { name: 'Show values' })).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Escape');
+    await expect(settings).toHaveCount(0);
+  });
+
+  test('switches between the light and dark glass themes', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Light' }).click();
+    await expect(page.locator('html')).toHaveClass(/light/);
+    await page.getByRole('tab', { name: 'Dark' }).click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    await page.keyboard.press('Escape');
+  });
+
   test('shows the internal-resistance fit and the RC time constant', async ({ page }) => {
     await loadExperiment(page, 'Internal resistance');
     const dock = page.locator('.bottom-dock');

@@ -36,6 +36,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
   const wiringFrom = useCircuitStore((s) => s.wiringFrom);
   const highlightIds = useCircuitStore((s) => s.highlightIds);
   const showGrid = useCircuitStore((s) => s.showGrid);
+  const showValues = useCircuitStore((s) => s.showValues);
   const experimentId = useCircuitStore((s) => s.experimentId);
   const canUndo = useCircuitStore((s) => s.past.length > 0);
   const canRedo = useCircuitStore((s) => s.future.length > 0);
@@ -96,10 +97,11 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       wiringFrom,
       highlightIds,
       showGrid,
+      showValues,
       labels,
       reduceMotion: getReducedMotion(),
     });
-  }, [ready, doc, solution, viewMode, theme, quality, selectionId, selectedWireId, wiringFrom, highlightIds, showGrid, labels]);
+  }, [ready, doc, solution, viewMode, theme, quality, selectionId, selectedWireId, wiringFrom, highlightIds, showGrid, showValues, labels]);
 
   useEffect(() => {
     rendererRef.current?.setView(view);
@@ -366,6 +368,14 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
               { id: 'schematic', label: t(language, 'view.schematic'), title: t(language, 'view.schematic') },
               { id: 'realistic', label: t(language, 'view.realistic'), title: t(language, 'view.realistic') },
             ]}
+          />
+          <div style={{ width: 3 }} />
+          <IconButton
+            icon="tag"
+            label={t(language, 'settings.values')}
+            active={showValues}
+            aria-pressed={showValues}
+            onClick={() => useCircuitStore.getState().toggleValues()}
           />
         </div>
 

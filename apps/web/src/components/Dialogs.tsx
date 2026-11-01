@@ -181,6 +181,10 @@ export function HelpContent() {
   const setTheme = useCircuitStore((s) => s.setTheme);
   const showGrid = useCircuitStore((s) => s.showGrid);
   const setShowGrid = useCircuitStore((s) => s.setShowGrid);
+  const showValues = useCircuitStore((s) => s.showValues);
+  const setShowValues = useCircuitStore((s) => s.setShowValues);
+  const pinned = useCircuitStore((s) => s.explainPinned);
+  const toggleExplainPinned = useCircuitStore((s) => s.toggleExplainPinned);
 
   return (
     <div style={{ fontSize: 12, lineHeight: 1.65, color: 'var(--ink-2)' }}>
@@ -217,6 +221,36 @@ export function HelpContent() {
         >
           <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={13} />
           {theme === 'dark' ? t(language, 'view.dark') : t(language, 'view.light')}
+        </button>
+      </div>
+      <div className="menu-divider" />
+      <div className="menu-row" style={{ padding: '6px 0' }}>
+        <span className="menu-row-label">
+          {t(language, 'settings.values')}
+          <span className="menu-row-hint">{t(language, 'settings.valuesHint')}</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={showValues}
+          aria-label={t(language, 'settings.values')}
+          className={`toggle ${showValues ? 'is-on' : ''}`}
+          onClick={() => setShowValues(!showValues)}
+        >
+          <span className="toggle-knob" />
+        </button>
+      </div>
+      <div className="menu-row" style={{ padding: '6px 0' }}>
+        <span className="menu-row-label">{t(language, 'explain.pin')}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={pinned}
+          aria-label={t(language, 'explain.pin')}
+          className={`toggle ${pinned ? 'is-on' : ''}`}
+          onClick={toggleExplainPinned}
+        >
+          <span className="toggle-knob" />
         </button>
       </div>
       <div className="section-label">About</div>

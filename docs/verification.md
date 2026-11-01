@@ -39,6 +39,10 @@ site.
 | Internal resistance | ✅ r annotation in circuit, “Lost volts” card, localized |
 | Redundant wire attempt | ✅ “These terminals are already connected.”, wire count unchanged |
 | Wire selection + delete | ✅ selected corridor highlighted, Delete removes it |
+| Liquid Glass UI | ✅ pure-black dark body (`rgb(0, 0, 0)`), frosted panels, iOS controls |
+| Live component values | ✅ settings/toolbar toggle, collision-aware V/I/R chips |
+| Apple-style settings menu | ✅ frosted popover with switches and segmented controls |
+| Lamp brightness feedback | ✅ glow scales from a faint halo at 2 V to a wide warm halo at 12 V |
 | Console errors | 0 |
 | Failed network requests | 0 |
 
@@ -56,11 +60,11 @@ site.
 | Suite | Result |
 | --- | --- |
 | Vitest (physics, transients, reasoning, teaching, routing) | 52 / 52 passed |
-| Playwright desktop project | 15 / 15 passed |
+| Playwright desktop project | 17 / 17 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 36 passed, 48 intentionally skipped (viewport-specific) |
+| Total e2e | 38 passed, 54 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

@@ -19,9 +19,9 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
 - Unit/physics/reasoning/teaching/routing tests: **52 passed**
-- Desktop e2e: **15 passed** (`desktop-chromium`, includes the smoke test)
+- Desktop e2e: **17 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **36 passed**, 48 intentionally skipped
+- Total Playwright: **38 passed**, 54 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -32,6 +32,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - The Explain panel can be pinned so it stays visible under Properties (disabled in Exam mode so answers stay hidden).
 - Cells and batteries with `r > 0` now draw an internal resistor and an `r = … Ω` annotation in both visual modes, with terminal p.d. / lost-volts cards in the inspector.
 - Wire logic: connections between pins that are already on the same node are refused with a localized message; overlapping routes are pushed into parallel lanes; wires can be selected and deleted.
+
+## Visual overhaul (second review)
+
+- Replaced the dark-blue theme with an Apple-inspired Liquid Glass system: pure-black dark background, translucent layered panels with specular hairlines, iOS segmented controls, spring switches, frosted settings popover and glass sheets/modals.
+- Rebuilt the realistic renderer with gradient materials (ceramic, brushed metal, glass, LCD) and added animated feedback layers: a lamp halo that scales with dissipated power, a breathing selection ring, a soft pulse whenever a component's current changes, and brighter current particles.
+- Added an optional, collision-aware V / I / R overlay next to every component in both visual modes. Chips are drawn in screen space so they stay legible at any zoom, avoid other components and each other, and are clamped inside the canvas.
+- Updated the shared UI palette, chart colours and typography to match the new design language; the light theme is a full Apple-style light surface.
 
 ## Known limitations
 

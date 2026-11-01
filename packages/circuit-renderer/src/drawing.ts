@@ -1,3 +1,4 @@
+import { FillGradient } from 'pixi.js';
 import type { Graphics } from 'pixi.js';
 import type { ComponentInstance } from '@circuitlab/circuit-core';
 import { getComponentDef } from '@circuitlab/circuit-core';
@@ -181,28 +182,92 @@ export function drawSchematicBody(g: Graphics, comp: ComponentInstance, palette:
 }
 
 // ---------------------------------------------------------------------------
-// Realistic mode
+// Realistic mode — layered gradients, soft metals and glass
 // ---------------------------------------------------------------------------
 
-function shadow(g: Graphics, palette: Palette, width = 74, height = 16): void {
-  g.ellipse(0, 26, width / 2, height / 2).fill({ color: palette.shadow, alpha: 0.28 });
+export function mixColor(a: number, b: number, t: number): number {
+  const ar = (a >> 16) & 255;
+  const ag = (a >> 8) & 255;
+  const ab = a & 255;
+  const br = (b >> 16) & 255;
+  const bg = (b >> 8) & 255;
+  const bb = b & 255;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return (r << 16) | (g << 8) | bl;
+}
+
+const shade = (color: number, amount: number): number =>
+  amount >= 0 ? mixColor(color, 0xffffff, amount) : mixColor(color, 0x000000, -amount);
+
+function linearFill(
+  stops: [number, number][],
+  vertical = true,
+): FillGradient {
+  return new FillGradient({
+    type: 'linear',
+    start: vertical ? { x: 0, y: 0 } : { x: 0, y: 0 },
+    end: vertical ? { x: 0, y: 1 } : { x: 1, y: 0 },
+    colorStops: stops.map(([offset, color]) => ({ offset, color })),
+    textureSpace: 'local',
+  });
+}
+
+function radialFill(stops: [number, number][], cx = 0.42, cy = 0.35): FillGradient {
+  return new FillGradient({
+    type: 'radial',
+    center: { x: cx, y: cy },
+    innerRadius: 0,
+    outerCenter: { x: 0.5, y: 0.5 },
+    outerRadius: 0.62,
+    colorStops: stops.map(([offset, color]) => ({ offset, color })),
+    textureSpace: 'local',
+  });
+}
+
+function softShadow(g: Graphics, palette: Palette, width = 78, height = 18): void {
+  g.ellipse(0, 27, width / 2 + 6, height / 2 + 5).fill({ color: palette.shadow, alpha: 0.12 });
+  g.ellipse(0, 26, width / 2, height / 2).fill({ color: palette.shadow, alpha: 0.24 });
 }
 
 function metalLead(g: Graphics, fromX: number, toX: number, palette: Palette): void {
-  g.roundRect(Math.min(fromX, toX), -2.2, Math.abs(toX - fromX), 4.4, 2).fill({ color: palette.metalDark });
-  g.roundRect(Math.min(fromX, toX) + 1, -1.2, Math.abs(toX - fromX) - 2, 2.4, 1.2).fill({ color: palette.metal, alpha: 0.9 });
+  const x = Math.min(fromX, toX);
+  const width = Math.abs(toX - fromX);
+  if (width <= 0) return;
+  const grad = linearFill([
+    [0, shade(palette.metalDark, -0.15)],
+    [0.24, palette.metal],
+    [0.4, shade(palette.metal, 0.6)],
+    [0.62, palette.metal],
+    [1, shade(palette.metalDark, -0.25)],
+  ]);
+  g.roundRect(x, -2.5, width, 5, 2.5).fill(grad).stroke({ width: 0.5, color: 0x000000, alpha: 0.28 });
 }
 
-function gloss(g: Graphics, x: number, y: number, w: number, h: number, palette: Palette): void {
-  g.roundRect(x, y, w, h, h / 2).fill({ color: 0xffffff, alpha: 0.16 });
+function gloss(g: Graphics, x: number, y: number, w: number, h: number): void {
+  g.roundRect(x, y, w, h, Math.min(h / 2, 3)).fill({ color: 0xffffff, alpha: 0.18 });
 }
 
 function drawLampGlow(g: Graphics, palette: Palette, intensity: number): void {
   if (intensity <= 0.01) return;
-  const alpha = Math.min(0.55, 0.12 + intensity * 0.5);
+  const alpha = Math.min(0.6, 0.12 + intensity * 0.55);
   for (let i = 4; i >= 1; i -= 1) {
     circle(g, 0, 0, 18 + i * 7, palette.glow, (alpha * 0.16) / i);
   }
+}
+
+function bezel(g: Graphics, palette: Palette, x: number, y: number, w: number, h: number, r: number): void {
+  g.roundRect(x, y, w, h, r)
+    .fill(
+      linearFill([
+        [0, shade(palette.bodyLight, 0.3)],
+        [0.14, palette.bodyLight],
+        [0.6, palette.body],
+        [1, shade(palette.body, -0.4)],
+      ]),
+    )
+    .stroke({ width: 1.2, color: shade(palette.body, -0.55), alpha: 0.9 });
 }
 
 export function drawRealisticBody(
@@ -213,146 +278,356 @@ export function drawRealisticBody(
 ): void {
   switch (comp.kind) {
     case 'resistor': {
-      shadow(g, palette);
+      softShadow(g, palette);
       metalLead(g, -52, -28, palette);
       metalLead(g, 28, 52, palette);
-      rect(g, -28, -13, 56, 26, 7, palette.ceramic, 1, palette.ceramicDark, 1.2);
-      const bands = [0x5a3b1e, 0x111111, 0xb02a2a, 0xd4a72c];
+      g.roundRect(-28, -13, 56, 26, 7)
+        .fill(
+          linearFill([
+            [0, shade(palette.ceramic, 0.4)],
+            [0.45, palette.ceramic],
+            [0.8, shade(palette.ceramic, -0.1)],
+            [1, shade(palette.ceramic, -0.28)],
+          ]),
+        )
+        .stroke({ width: 1, color: shade(palette.ceramicDark, -0.1), alpha: 0.85 });
+      const bands = [0x5a3b1e, 0x141414, 0xb02a2a, 0xd4a72c];
       bands.forEach((color, index) => {
-        g.rect(-16 + index * 9, -13, 5, 26).fill({ color, alpha: 0.95 });
+        g.rect(-16 + index * 9, -13, 5, 26).fill(
+          linearFill([
+            [0, shade(color, 0.18)],
+            [0.5, color],
+            [1, shade(color, -0.35)],
+          ]),
+        );
       });
-      gloss(g, -24, -10, 44, 4, palette);
+      gloss(g, -24, -10, 44, 4);
+      g.roundRect(-24, 8, 44, 3, 1.5).fill({ color: 0x000000, alpha: 0.1 });
       break;
     }
     case 'variable-resistor': {
-      shadow(g, palette);
+      softShadow(g, palette);
       metalLead(g, -52, -28, palette);
       metalLead(g, 28, 52, palette);
-      rect(g, -28, -13, 56, 26, 7, palette.ceramic, 1, palette.ceramicDark, 1.2);
-      g.rect(-16, -13, 5, 26).fill({ color: 0x5a3b1e });
-      g.rect(-4, -13, 5, 26).fill({ color: 0x111111 });
-      g.rect(8, -13, 5, 26).fill({ color: 0xb02a2a });
-      circle(g, 0, -18, 9, palette.bodyLight);
-      circle(g, 0, -18, 5.5, palette.metalDark);
-      circle(g, 0, -18, 2, palette.accent);
-      line(g, [[0, -18], [14, -6]], palette.metal, 2.4);
-      gloss(g, -24, -10, 44, 4, palette);
+      g.roundRect(-28, -13, 56, 26, 7)
+        .fill(
+          linearFill([
+            [0, shade(palette.ceramic, 0.4)],
+            [0.5, palette.ceramic],
+            [1, shade(palette.ceramic, -0.3)],
+          ]),
+        )
+        .stroke({ width: 1, color: shade(palette.ceramicDark, -0.1), alpha: 0.85 });
+      [0x5a3b1e, 0x141414, 0xb02a2a].forEach((color, index) => {
+        g.rect(-16 + index * 12, -13, 5, 26).fill(color);
+      });
+      g.circle(0, -19, 10).fill(
+        linearFill([
+          [0, shade(palette.metal, 0.5)],
+          [0.5, palette.metal],
+          [1, shade(palette.metalDark, -0.2)],
+        ]),
+      );
+      g.circle(0, -19, 6).fill(
+        radialFill([
+          [0, shade(palette.metalDark, 0.15)],
+          [1, shade(palette.metalDark, -0.55)],
+        ]),
+      );
+      g.circle(-2.4, -21, 1.8).fill({ color: 0xffffff, alpha: 0.5 });
+      gloss(g, -24, -10, 44, 4);
       break;
     }
     case 'lamp': {
       drawLampGlow(g, palette, intensity);
-      shadow(g, palette, 60, 12);
+      softShadow(g, palette, 58, 14);
       metalLead(g, -52, -14, palette);
       metalLead(g, 14, 52, palette);
-      rect(g, -9, 16, 18, 12, 3, palette.metalDark, 1);
-      rect(g, -7, 8, 14, 10, 2, palette.metal, 1);
-      g.circle(0, -2, 21).fill({ color: palette.glass, alpha: 0.26 }).stroke({ width: 1.6, color: palette.glass, alpha: 0.65 });
-      line(g, [[-6, 12], [-3, 0], [0, 8], [3, -2], [6, 8]], palette.glow, 1.8, 0.75 + intensity * 0.25);
-      circle(g, 0, -2, 6 + intensity * 4, palette.glow, 0.15 + intensity * 0.25);
-      g.circle(-7, -12, 6).fill({ color: 0xffffff, alpha: 0.18 });
+      // screw base
+      g.roundRect(-10, 15, 20, 14, 3).fill(
+        linearFill([
+          [0, shade(palette.metalDark, 0.25)],
+          [0.5, palette.metal],
+          [1, shade(palette.metalDark, -0.35)],
+        ]),
+      );
+      for (let i = 0; i < 3; i += 1) {
+        g.rect(-10, 17 + i * 4, 20, 1.1).fill({ color: 0x000000, alpha: 0.25 });
+      }
+      g.roundRect(-7.5, 8, 15, 9, 2).fill({
+        color: shade(palette.metal, 0.1),
+      });
+      // glass
+      g.circle(0, -2, 21.5)
+        .fill(
+          radialFill([
+            [0, shade(palette.glass, 0.55)],
+            [0.55, palette.glass],
+            [1, shade(palette.glass, -0.15)],
+          ]),
+        )
+        .stroke({ width: 1.5, color: shade(palette.glass, 0.2), alpha: 0.55 });
+      g.circle(0, -2, 21.5).fill({ color: palette.glass, alpha: 0.12 });
+      // filament
+      g.poly([-6, 12, -3, 0, 0, 8, 3, -2, 6, 8]).fill({
+        color: palette.glow,
+        alpha: 0.18 + intensity * 0.25,
+      });
+      line(g, [[-6, 12], [-3, 0], [0, 8], [3, -2], [6, 8]], palette.glow, 1.7, 0.7 + intensity * 0.3);
+      circle(g, 0, 0, 5 + intensity * 6, palette.glow, 0.14 + intensity * 0.3);
+      // specular highlights
+      g.circle(-8, -13, 5.5).fill({ color: 0xffffff, alpha: 0.22 });
+      g.circle(-10, -15, 2.2).fill({ color: 0xffffff, alpha: 0.5 });
       break;
     }
     case 'cell': {
-      shadow(g, palette);
+      softShadow(g, palette);
       metalLead(g, -52, -38, palette);
       metalLead(g, 38, 52, palette);
-      rect(g, -38, -22, 76, 44, 7, palette.bodyLight, 1, palette.metalDark, 1.2);
-      rect(g, -38, -22, 76, 10, 5, palette.metal, 0.75);
-      rect(g, 24, -26, 12, 8, 2, palette.copper, 1);
-      rect(g, 28, -30, 5, 6, 1.5, palette.metal, 1);
-      g.rect(-38, 4, 76, 2).fill({ color: palette.metalDark, alpha: 0.5 });
+      g.roundRect(-38, -22, 76, 44, 8)
+        .fill(
+          linearFill([
+            [0, shade(palette.bodyLight, 0.35)],
+            [0.16, palette.bodyLight],
+            [0.6, palette.body],
+            [1, shade(palette.body, -0.45)],
+          ]),
+        )
+        .stroke({ width: 1, color: shade(palette.body, -0.6), alpha: 0.9 });
+      // sleeve
+      g.roundRect(-27, -16, 54, 32, 4)
+        .fill(
+          linearFill([
+            [0, shade(palette.accent, 0.1)],
+            [0.35, palette.accent],
+            [1, shade(palette.accent, -0.55)],
+          ]),
+        )
+        .stroke({ width: 0.8, color: shade(palette.accent, -0.6), alpha: 0.8 });
+      g.rect(-27, -2, 54, 1.2).fill({ color: 0xffffff, alpha: 0.24 });
+      // positive cap
+      g.roundRect(30, -9, 9, 18, 3).fill(
+        linearFill([
+          [0, shade(palette.copper, 0.4)],
+          [0.5, palette.copper],
+          [1, shade(palette.copper, -0.45)],
+        ]),
+      );
+      g.roundRect(35, -14, 5, 8, 2).fill({ color: shade(palette.metal, 0.2) });
+      // highlight
+      g.roundRect(-34, -19, 24, 4, 2).fill({ color: 0xffffff, alpha: 0.18 });
+      g.roundRect(-34, 16, 68, 3, 1.5).fill({ color: 0x000000, alpha: 0.12 });
       if ((comp.params.internalResistance ?? 0) > 0) {
-        // A small ceramic resistor in series with the EMF, tucked between the
-        // cell body and its positive terminal.
-        g.roundRect(39, -6, 12, 12, 3).fill({ color: palette.ceramic, alpha: 1 }).stroke({ width: 1.1, color: palette.ceramicDark });
+        g.roundRect(39, -6, 12, 12, 3)
+          .fill(
+            linearFill([
+              [0, shade(palette.ceramic, 0.4)],
+              [1, shade(palette.ceramic, -0.25)],
+            ]),
+          )
+          .stroke({ width: 1, color: palette.ceramicDark });
         g.rect(43, -6, 3.4, 12).fill({ color: 0x7a3b1e, alpha: 0.95 });
-        g.rect(47, -6, 2.6, 12).fill({ color: 0x1a1a1a, alpha: 0.95 });
+        g.rect(47, -6, 2.6, 12).fill({ color: 0x141414, alpha: 0.95 });
       }
       break;
     }
     case 'battery': {
-      shadow(g, palette, 82, 18);
+      softShadow(g, palette, 86, 20);
       metalLead(g, -52, -42, palette);
       metalLead(g, 42, 52, palette);
-      rect(g, -42, -24, 84, 48, 8, palette.body, 1, palette.metalDark, 1.4);
-      rect(g, -42, -24, 84, 12, 6, palette.bodyLight, 0.75);
-      rect(g, -30, -18, 60, 36, 4, palette.bodyLight, 0.55, palette.metalDark, 1);
-      rect(g, 28, -30, 10, 8, 2, palette.copper, 1);
-      rect(g, 31, -34, 4, 5, 1.5, palette.metal, 1);
+      g.roundRect(-42, -24, 84, 48, 9)
+        .fill(
+          linearFill([
+            [0, shade(palette.bodyLight, 0.4)],
+            [0.18, palette.bodyLight],
+            [0.62, palette.body],
+            [1, shade(palette.body, -0.5)],
+          ]),
+        )
+        .stroke({ width: 1, color: shade(palette.body, -0.6), alpha: 0.9 });
+      g.roundRect(-32, -17, 64, 34, 5)
+        .fill(
+          linearFill([
+            [0, shade(palette.body, 0.28)],
+            [0.5, palette.body],
+            [1, shade(palette.body, -0.35)],
+          ]),
+        )
+        .stroke({ width: 0.8, color: shade(palette.body, -0.55), alpha: 0.8 });
+      // two cell segments
+      g.rect(-2, -17, 1.4, 34).fill({ color: 0xffffff, alpha: 0.12 });
+      g.roundRect(-34, -21, 30, 3, 1.5).fill({ color: 0xffffff, alpha: 0.16 });
+      g.roundRect(32, -9, 9, 18, 3).fill(
+        linearFill([
+          [0, shade(palette.copper, 0.45)],
+          [0.5, palette.copper],
+          [1, shade(palette.copper, -0.5)],
+        ]),
+      );
+      g.roundRect(37, -14, 5, 8, 2).fill({ color: shade(palette.metal, 0.25) });
       break;
     }
     case 'switch': {
-      shadow(g, palette, 70, 14);
+      softShadow(g, palette, 72, 16);
       metalLead(g, -52, -24, palette);
       metalLead(g, 24, 52, palette);
-      rect(g, -34, 8, 68, 12, 3, palette.bodyLight, 1, palette.metalDark, 1);
-      circle(g, -24, 0, 6, palette.metalDark);
-      circle(g, 24, 0, 6, palette.metalDark);
+      g.roundRect(-36, 7, 72, 13, 4)
+        .fill(
+          linearFill([
+            [0, shade(palette.bodyLight, 0.25)],
+            [1, shade(palette.body, -0.35)],
+          ]),
+        )
+        .stroke({ width: 0.8, color: shade(palette.body, -0.55), alpha: 0.8 });
+      g.circle(-24, 0, 6.5).fill(
+        radialFill([
+          [0, shade(palette.metal, 0.35)],
+          [1, shade(palette.metalDark, -0.35)],
+        ]),
+      );
+      g.circle(24, 0, 6.5).fill(
+        radialFill([
+          [0, shade(palette.metal, 0.35)],
+          [1, shade(palette.metalDark, -0.35)],
+        ]),
+      );
       const closed = comp.params.closed !== false;
       if (closed) {
-        rect(g, -24, -4, 48, 6, 3, palette.metal, 1);
+        g.roundRect(-24, -4.5, 48, 7, 3.5).fill(
+          linearFill([
+            [0, shade(palette.metal, 0.55)],
+            [0.45, palette.metal],
+            [1, shade(palette.metal, -0.25)],
+          ]),
+        );
       } else {
-        g.roundRect(-24, -4, 48, 6, 3).fill({ color: palette.metal, alpha: 0.9 });
-        g.rotation = 0;
-        line(g, [[-24, -2], [18, -22]], palette.metal, 5);
-        line(g, [[-24, -2], [18, -22]], palette.metalDark, 1.4, 0.4);
+        g.moveTo(-25, -2).lineTo(17, -23).stroke({ width: 6, color: shade(palette.metal, -0.15), cap: 'round' });
+        g.moveTo(-25, -3).lineTo(17, -24).stroke({ width: 2.4, color: shade(palette.metal, 0.5), cap: 'round' });
       }
-      circle(g, -24, 0, 2.4, palette.accent);
+      g.circle(-24, 0, 2.2).fill({ color: palette.accent, alpha: 0.9 });
       break;
     }
     case 'ammeter':
     case 'voltmeter': {
-      shadow(g, palette, 74, 14);
+      softShadow(g, palette, 80, 16);
       metalLead(g, -52, -34, palette);
       metalLead(g, 34, 52, palette);
-      rect(g, -34, -28, 68, 56, 9, palette.body, 1, palette.metalDark, 1.6);
-      rect(g, -34, -28, 68, 14, 7, palette.bodyLight, 0.8);
-      rect(g, -27, -10, 54, 24, 4, palette.displayBg, 1, palette.metalDark, 1);
-      gloss(g, -30, -24, 60, 3, palette);
+      bezel(g, palette, -34, -28, 68, 56, 10);
+      g.roundRect(-27, -10, 54, 25, 4)
+        .fill(
+          linearFill([
+            [0, shade(palette.displayBg, 0.16)],
+            [0.6, palette.displayBg],
+            [1, shade(palette.displayBg, -0.25)],
+          ]),
+        )
+        .stroke({ width: 1, color: shade(palette.body, -0.6), alpha: 0.9 });
+      g.roundRect(-27, -10, 54, 12, 4).fill({ color: 0xffffff, alpha: 0.05 });
+      g.roundRect(-30, -25, 60, 3, 1.5).fill({ color: 0xffffff, alpha: 0.2 });
+      g.roundRect(-31, 18, 62, 2.5, 1.25).fill({ color: 0x000000, alpha: 0.18 });
       break;
     }
     case 'ldr': {
-      shadow(g, palette, 62, 14);
+      softShadow(g, palette, 64, 16);
       metalLead(g, -52, -22, palette);
       metalLead(g, 22, 52, palette);
-      g.circle(0, -2, 24).fill({ color: palette.ceramic, alpha: 1 }).stroke({ width: 2, color: palette.ceramicDark });
-      g.circle(0, -2, 19).fill({ color: palette.ceramicDark, alpha: 0.28 });
-      line(g, [[-11, -12], [11, -12], [-11, 8], [11, 8]], palette.metalDark, 2.4);
+      g.circle(0, -2, 24.5)
+        .fill(
+          radialFill([
+            [0, shade(palette.ceramic, 0.45)],
+            [0.55, palette.ceramic],
+            [1, shade(palette.ceramic, -0.3)],
+          ]),
+        )
+        .stroke({ width: 1.6, color: shade(palette.ceramicDark, -0.1), alpha: 0.9 });
+      g.circle(0, -2, 19).fill({ color: shade(palette.ceramicDark, -0.15), alpha: 0.35 });
+      // serpentine track
+      line(g, [[-12, -12], [12, -12], [-12, 8], [12, 8]], shade(palette.ceramicDark, -0.2), 2.6);
+      line(g, [[-12, -12], [12, -12], [-12, 8], [12, 8]], 0xffffff, 0.8, 0.18);
+      // light arrows
       line(g, [[-36, 24], [-14, 10]], palette.highlight, 2);
       arrowHead(g, [-14, 10], [-36, 24], palette.highlight, 5);
       line(g, [[-28, 34], [-6, 20]], palette.highlight, 2);
       arrowHead(g, [-6, 20], [-28, 34], palette.highlight, 5);
-      g.circle(-9, -16, 5).fill({ color: 0xffffff, alpha: 0.22 });
+      g.ellipse(-8, -14, 7, 4.5).fill({ color: 0xffffff, alpha: 0.25 });
       break;
     }
     case 'thermistor': {
-      shadow(g, palette, 52, 12);
+      softShadow(g, palette, 52, 14);
       metalLead(g, -52, -18, palette);
       metalLead(g, 18, 52, palette);
-      g.circle(0, -2, 20).fill({ color: palette.bodyLight, alpha: 1 }).stroke({ width: 2, color: palette.metalDark });
-      g.circle(0, -2, 13).fill({ color: palette.danger, alpha: 0.35 });
-      line(g, [[-10, 6], [10, -10]], palette.metalDark, 2);
+      g.circle(0, -2, 20)
+        .fill(
+          radialFill([
+            [0, shade(palette.bodyLight, 0.4)],
+            [0.55, palette.bodyLight],
+            [1, shade(palette.body, -0.35)],
+          ]),
+        )
+        .stroke({ width: 1.4, color: shade(palette.body, -0.55), alpha: 0.9 });
+      g.circle(0, -2, 13).fill({ color: palette.danger, alpha: 0.22 });
+      g.circle(0, -2, 13).stroke({ width: 1, color: palette.danger, alpha: 0.35 });
+      line(g, [[-9, 6], [9, -10]], shade(palette.body, -0.55), 1.8);
+      g.ellipse(-6, -10, 5, 3.4).fill({ color: 0xffffff, alpha: 0.28 });
       break;
     }
     case 'capacitor': {
-      shadow(g, palette, 56, 12);
+      softShadow(g, palette, 58, 14);
       metalLead(g, -52, -18, palette);
       metalLead(g, 18, 52, palette);
-      rect(g, -22, -30, 44, 60, 12, palette.body, 1, palette.metalDark, 1.4);
-      rect(g, -22, -30, 12, 60, 6, palette.bodyLight, 0.35);
-      g.ellipse(0, -30, 22, 6).fill({ color: palette.metal, alpha: 0.8 });
-      g.rect(6, -26, 12, 52).fill({ color: palette.accent, alpha: 0.28 });
-      g.rect(6, -26, 3, 52).fill({ color: palette.accent, alpha: 0.6 });
+      g.roundRect(-22, -30, 44, 60, 12)
+        .fill(
+          linearFill([
+            [0, shade(palette.metal, 0.45)],
+            [0.18, palette.metal],
+            [0.5, shade(palette.metalDark, 0.05)],
+            [0.82, shade(palette.metalDark, -0.25)],
+            [1, shade(palette.metal, 0.1)],
+          ], false),
+        )
+        .stroke({ width: 1, color: shade(palette.metalDark, -0.4), alpha: 0.9 });
+      g.rect(-14, -28, 28, 56).fill(
+        linearFill([
+          [0, shade(palette.accent, 0.2)],
+          [0.5, palette.accent],
+          [1, shade(palette.accent, -0.5)],
+        ]),
+      );
+      g.rect(-14, -4, 28, 1.2).fill({ color: 0xffffff, alpha: 0.35 });
+      g.ellipse(0, -30, 22, 5.5)
+        .fill(
+          linearFill([
+            [0, shade(palette.metal, 0.6)],
+            [1, palette.metal],
+          ]),
+        )
+        .stroke({ width: 0.8, color: shade(palette.metalDark, -0.2), alpha: 0.8 });
+      g.rect(4, -30, 3, 60).fill({ color: 0xffffff, alpha: 0.14 });
       break;
     }
     case 'diode': {
-      shadow(g, palette, 62, 12);
+      softShadow(g, palette, 64, 14);
       metalLead(g, -52, -24, palette);
       metalLead(g, 24, 52, palette);
-      rect(g, -24, -13, 48, 26, 5, 0x15181d, 1, 0x000000, 1.2);
-      rect(g, 13, -13, 7, 26, 2, palette.metal, 0.9);
-      g.poly([-12, -7, -12, 7, 2, 0]).fill({ color: palette.metal, alpha: 0.6 });
-      gloss(g, -20, -10, 34, 3, palette);
+      g.roundRect(-24, -13, 48, 26, 6)
+        .fill(
+          linearFill([
+            [0, shade(0x2a2f38, 0.35)],
+            [0.5, 0x1a1d23],
+            [1, 0x07080a],
+          ]),
+        )
+        .stroke({ width: 1, color: 0x000000, alpha: 0.9 });
+      g.rect(13, -13, 7, 26)
+        .fill(
+          linearFill([
+            [0, shade(palette.metal, 0.5)],
+            [0.5, palette.metal],
+            [1, shade(palette.metalDark, -0.2)],
+          ], false),
+        );
+      g.poly([-12, -7, -12, 7, 2, 0]).fill({ color: palette.metal, alpha: 0.55 });
+      gloss(g, -20, -10, 34, 3);
       break;
     }
     default:

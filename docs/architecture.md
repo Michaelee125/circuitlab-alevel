@@ -122,6 +122,12 @@ components, overlay (selection, terminals, wiring preview), particles, labels.
   current entering the component at the terminal, and their speed from the
   current magnitude.
 - Quality levels control device-pixel ratio, particle density and frame cap.
+- Value chips (V / I / R) are drawn in a screen-space layer above the world, so
+  they stay legible at any zoom. Their placement is collision-aware against
+  component bounds, designators and other chips, and clamped to the canvas.
+- Animated feedback lives in two layers: an additive glow layer for lamp halos
+  and a normal FX layer for the breathing selection ring and value-change
+  pulses. Lamp intensity is derived from the dissipated power in the solution.
 - Hit testing stays in `circuit-core` (not Pixi) so touch and mouse interactions
   are testable without a GPU.
 

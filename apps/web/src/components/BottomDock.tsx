@@ -11,8 +11,8 @@ type Series = { name: string; points: [number, number][]; color?: string; dashed
 
 function chartColors(theme: string) {
   return theme === 'light'
-    ? { axis: '#5b798e', split: 'rgba(2,132,199,0.12)', text: '#0a2136', accent: '#0284c7', accent2: '#4f46e5', warn: '#b45309' }
-    : { axis: '#6f8ba6', split: 'rgba(86,200,255,0.10)', text: '#cfe4f5', accent: '#38e8ff', accent2: '#6d8cff', warn: '#ffb454' };
+    ? { axis: '#6b7280', split: 'rgba(0,122,255,0.10)', text: '#1c1c1e', accent: '#007aff', accent2: '#5856d6', warn: '#c93400' }
+    : { axis: '#8e8e93', split: 'rgba(108,196,255,0.10)', text: '#e6e6ea', accent: '#6cc4ff', accent2: '#5e5ce6', warn: '#ff9f0a' };
 }
 
 export function ChartView() {

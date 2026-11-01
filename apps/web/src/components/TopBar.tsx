@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { t, componentName } from '@circuitlab/i18n';
 import type { Language } from '@circuitlab/circuit-core';
 import { Icon, IconButton, Segmented } from '@circuitlab/ui';
@@ -79,16 +81,162 @@ export function LanguagePicker({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function ThemeToggle() {
-  const theme = useCircuitStore((s) => s.theme);
-  const language = useCircuitStore((s) => s.language);
-  const setTheme = useCircuitStore((s) => s.setTheme);
+function MenuSwitch({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
   return (
-    <IconButton
-      icon={theme === 'dark' ? 'moon' : 'sun'}
-      label={`${t(language, 'view.theme')}: ${theme === 'dark' ? t(language, 'view.dark') : t(language, 'view.light')}`}
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-    />
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`toggle ${checked ? 'is-on' : ''}`}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="toggle-knob" />
+    </button>
+  );
+}
+
+function SettingsMenu() {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, right: 0 });
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const language = useCircuitStore((s) => s.language);
+  const theme = useCircuitStore((s) => s.theme);
+  const setTheme = useCircuitStore((s) => s.setTheme);
+  const viewMode = useCircuitStore((s) => s.viewMode);
+  const setViewMode = useCircuitStore((s) => s.setViewMode);
+  const quality = useCircuitStore((s) => s.quality);
+  const setQuality = useCircuitStore((s) => s.setQuality);
+  const showValues = useCircuitStore((s) => s.showValues);
+  const setShowValues = useCircuitStore((s) => s.setShowValues);
+  const showGrid = useCircuitStore((s) => s.showGrid);
+  const setShowGrid = useCircuitStore((s) => s.setShowGrid);
+  const pinned = useCircuitStore((s) => s.explainPinned);
+  const toggleExplainPinned = useCircuitStore((s) => s.toggleExplainPinned);
+  const setSheet = useCircuitStore((s) => s.setSheet);
+
+  useEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPosition({
+        top: rect.bottom + 10,
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const onDown = (event: PointerEvent) => {
+      if (anchorRef.current && !anchorRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('resize', measure);
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
+
+  return (
+    <div className="menu-anchor" ref={anchorRef}>
+      <IconButton
+        ref={buttonRef}
+        icon="sliders"
+        label={t(language, 'settings.title')}
+        active={open}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      />
+      {open &&
+        createPortal(
+          <div
+            className="settings-popover settings-popover-fixed"
+            role="dialog"
+            aria-label={t(language, 'settings.title')}
+            style={{ top: position.top, right: position.right }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+          <div className="menu-header">{t(language, 'settings.view')}</div>
+          <div className="menu-row">
+            <span className="menu-row-label">{t(language, 'settings.style')}</span>
+            <Segmented
+              value={viewMode}
+              ariaLabel={t(language, 'settings.style')}
+              onChange={(value) => setViewMode(value)}
+              options={[
+                { id: 'schematic', label: t(language, 'view.schematic').slice(0, 10) },
+                { id: 'realistic', label: t(language, 'view.realistic').slice(0, 10) },
+              ]}
+            />
+          </div>
+          <div className="menu-row">
+            <span className="menu-row-label">
+              {t(language, 'settings.values')}
+              <span className="menu-row-hint">{t(language, 'settings.valuesHint')}</span>
+            </span>
+            <MenuSwitch checked={showValues} onChange={setShowValues} label={t(language, 'settings.values')} />
+          </div>
+          <div className="menu-row">
+            <span className="menu-row-label">{t(language, 'canvas.grid')}</span>
+            <MenuSwitch checked={showGrid} onChange={setShowGrid} label={t(language, 'canvas.grid')} />
+          </div>
+          {useCircuitStore.getState().mode !== 'exam' && (
+            <div className="menu-row">
+              <span className="menu-row-label">{t(language, 'explain.pin')}</span>
+              <MenuSwitch checked={pinned} onChange={toggleExplainPinned} label={t(language, 'explain.pin')} />
+            </div>
+          )}
+          <div className="menu-row">
+            <span className="menu-row-label">{t(language, 'view.quality')}</span>
+            <Segmented
+              value={quality}
+              ariaLabel={t(language, 'view.quality')}
+              onChange={(value) => setQuality(value)}
+              options={[
+                { id: 'high', label: t(language, 'view.quality.high') },
+                { id: 'medium', label: t(language, 'view.quality.medium') },
+                { id: 'low', label: t(language, 'view.quality.low') },
+              ]}
+            />
+          </div>
+          <div className="menu-row">
+            <span className="menu-row-label">{t(language, 'view.theme')}</span>
+            <Segmented
+              value={theme}
+              ariaLabel={t(language, 'view.theme')}
+              onChange={(value) => setTheme(value)}
+              options={[
+                { id: 'dark', label: t(language, 'view.dark') },
+                { id: 'light', label: t(language, 'view.light') },
+              ]}
+            />
+          </div>
+          <div className="menu-divider" />
+          <div className="menu-header">{t(language, 'settings.data')}</div>
+          <button className="menu-action" onClick={() => { close(); void useCircuitStore.getState().saveCurrent(); }}>
+            <Icon name="save" size={15} /> {t(language, 'action.save')}
+          </button>
+          <button className="menu-action" onClick={() => { close(); setSheet('saved'); }}>
+            <Icon name="folder" size={15} /> {t(language, 'action.open')}
+          </button>
+          <button className="menu-action" onClick={() => { close(); void useCircuitStore.getState().exportCurrent(); }}>
+            <Icon name="download" size={15} /> {t(language, 'action.export')}
+          </button>
+          <button className="menu-action" onClick={() => { close(); setSheet('help'); }}>
+            <Icon name="help" size={15} /> {t(language, 'help.title')}
+          </button>
+          </div>,
+          document.body,
+        )}
+    </div>
   );
 }
 
@@ -127,7 +275,7 @@ export function TopBar() {
       <div className="topbar-spacer" />
       <LanguagePicker />
       <div className="topbar-group">
-        <ThemeToggle />
+        <SettingsMenu />
         <IconButton
           icon="chart"
           label={t(language, 'panel.graph')}

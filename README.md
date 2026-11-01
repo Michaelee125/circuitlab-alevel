@@ -16,11 +16,15 @@ circuit — not from keyword matching.
 - **No backend:** the whole simulation runs in the browser and is deployed as a
   static GitHub Pages site.
 
-![CircuitLab LDR experiment](docs/images/explain-desktop.png)
+![CircuitLab Liquid Glass interface with live component values](docs/images/glass-schematic-values.png)
 
-| Pinned explanation + internal resistance | 中文界面 |
+| Liquid Glass schematic + live V / I / R | Realistic mode with animated lamp glow |
 | --- | --- |
-| ![Pinned explain panel with internal resistance](docs/images/pinned-internal-resistance.png) | ![Chinese interface](docs/images/chinese-ui.png) |
+| ![Schematic with live component values](docs/images/glass-schematic-values.png) | ![Realistic lamp with power-scaled glow](docs/images/glass-lamp-glow.png) |
+| Apple-style settings menu | 中文界面 |
+| ![Settings popover](docs/images/glass-settings.png) | ![Chinese interface](docs/images/glass-chinese.png) |
+| Liquid Glass sheet on a phone | |
+| ![Mobile glass sheet](docs/images/glass-mobile.png) | |
 
 ## Why this is not just an animation
 
@@ -56,12 +60,24 @@ stays at the supply voltage and only the LDR branch current changes.
 | Pinnable Explain panel that stays visible while you edit | ✅ |
 | Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
+| Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
+| Live V / I / R chips beside each component (collision-aware, constant size at any zoom) | ✅ |
+| Animated feedback: lamp glow scales with power, value-change pulses, current particles | ✅ |
+| Apple-style settings popover (appearance, quality, values, grid, pin, circuit actions) | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |
 | Save/load (IndexedDB), JSON import/export, share link | ✅ |
 | Responsive desktop / tablet / phone layout with touch wiring and pinch zoom | ✅ |
 | GitHub Actions + GitHub Pages deployment | ✅ |
 | WeChat mini-program adapter layer and integration plan | ✅ (Phase 2 not published) |
+
+**Design:** the interface follows Apple's Liquid Glass direction — translucent
+layered surfaces, hairline specular edges, iOS-style segmented controls,
+switches and a frosted settings menu. Dark mode uses a pure-black page with
+glass panels; light mode uses Apple's grouped-background greys. Components are
+drawn with layered gradients (ceramic, metal, glass, LCD) and animate in real
+time: the lamp halo grows with dissipated power, a soft ring pulses when a
+component's current changes, and charge carriers flow along the wires.
 
 **Not claimed:** official mark schemes. Exam mode uses CircuitLab's own
 software-authored practice marking points, clearly labelled in the UI and in

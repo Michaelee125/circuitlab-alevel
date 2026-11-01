@@ -30,6 +30,7 @@ export interface RenderState {
   hoverTerminal?: { componentId: string; terminalId: string } | null;
   highlightIds?: string[];
   showGrid?: boolean;
+  showValues?: boolean;
   labels?: Record<string, string>;
   reduceMotion?: boolean;
 }
@@ -70,6 +71,9 @@ export class CircuitRenderer {
   private componentRoot = new Container();
   private overlay = new Graphics();
   private particleLayer = new Graphics();
+  private glowLayer = new Graphics();
+  private fxLayer = new Graphics();
+  private chipRoot = new Container();
   private labelRoot = new Container();
   private tickerHandler: ((ticker: Ticker) => void) | null = null;
   private state: RenderState | null = null;
@@ -80,6 +84,9 @@ export class CircuitRenderer {
   private flows: Flow[] = [];
   private previewPoint: Point | null = null;
   private destroyed = false;
+  private time = 0;
+  private previousCurrents = new Map<string, number>();
+  private flashes = new Map<string, number>();
 
   get ready(): boolean {
     return Boolean(this.app);
@@ -101,8 +108,20 @@ export class CircuitRenderer {
     this.app = app;
     this.width = width;
     this.height = height;
-    this.world.addChild(this.grid, this.wires, this.componentRoot, this.overlay, this.particleLayer, this.labelRoot);
+    this.world.addChild(
+      this.grid,
+      this.wires,
+      this.componentRoot,
+      this.glowLayer,
+      this.fxLayer,
+      this.overlay,
+      this.particleLayer,
+      this.labelRoot,
+    );
+    this.glowLayer.blendMode = 'add';
     app.stage.addChild(this.world);
+    // Value chips are drawn in screen space so they stay legible at any zoom.
+    app.stage.addChild(this.chipRoot);
     this.tickerHandler = (ticker: Ticker) => this.onTick(ticker.deltaMS / 1000);
     app.ticker.add(this.tickerHandler);
     app.ticker.maxFPS = quality === 'low' ? 30 : 60;
@@ -134,7 +153,11 @@ export class CircuitRenderer {
   setView(view: { x: number; y: number; zoom: number }): void {
     this.view = view;
     this.applyView();
-    if (this.state) this.drawGrid();
+    if (this.state) {
+      this.drawGrid();
+      this.drawValueChips();
+      this.drawOverlay();
+    }
   }
 
   private applyView(): void {
@@ -153,7 +176,26 @@ export class CircuitRenderer {
     const themeChanged = this.state?.theme !== state.theme;
     this.state = state;
     if (themeChanged) this.palette = paletteFor(state.theme);
+    this.detectValueChanges();
     this.rebuild();
+  }
+
+  /** Pulse a component when its current visibly changes after an edit. */
+  private detectValueChanges(): void {
+    const solution = this.state?.solution;
+    if (!solution) return;
+    const now = performance.now();
+    for (const [id, reading] of Object.entries(solution.components)) {
+      const next = reading.currentMagnitude;
+      const previous = this.previousCurrents.get(id);
+      if (previous !== undefined) {
+        const delta = Math.abs(next - previous);
+        if (reading.valid && delta > Math.max(5e-4, previous * 0.04) && delta > 5e-4) {
+          this.flashes.set(id, now);
+        }
+      }
+      this.previousCurrents.set(id, next);
+    }
   }
 
   setPointer(point: Point | null): void {
@@ -179,6 +221,7 @@ export class CircuitRenderer {
     this.palette = paletteFor(state.theme);
     this.drawWires();
     this.drawComponents();
+    this.drawValueChips();
     this.drawOverlay();
     this.drawGrid();
     this.buildFlows();
@@ -293,7 +336,7 @@ export class CircuitRenderer {
           text: value,
           style: {
             fontFamily: MONO,
-            fontSize: state.viewMode === 'realistic' ? 11 : 12,
+            fontSize: state.viewMode === 'realistic' ? 11 : 13.5,
             fontWeight: '600',
             fill: this.palette.displayText,
           },
@@ -304,7 +347,7 @@ export class CircuitRenderer {
         if (state.viewMode === 'schematic') {
           const letter = new Text({
             text: comp.kind === 'ammeter' ? 'A' : 'V',
-            style: { fontFamily: FONT, fontSize: 13, fontWeight: '700', fill: this.palette.accent },
+            style: { fontFamily: FONT, fontSize: 14, fontWeight: '700', fill: this.palette.accent },
           });
           letter.anchor.set(0.5);
           letter.position.set(0, -14);
@@ -315,7 +358,15 @@ export class CircuitRenderer {
       this.componentRoot.addChild(container);
 
       const labelText = state.labels?.[comp.id] ?? comp.label ?? getComponentDef(comp.kind).name;
-      const showValue = comp.kind === 'resistor' || comp.kind === 'variable-resistor' || comp.kind === 'ldr' || comp.kind === 'thermistor' || comp.kind === 'capacitor' || comp.kind === 'cell' || comp.kind === 'battery';
+      const showValue =
+        !state.showValues &&
+        (comp.kind === 'resistor' ||
+          comp.kind === 'variable-resistor' ||
+          comp.kind === 'ldr' ||
+          comp.kind === 'thermistor' ||
+          comp.kind === 'capacitor' ||
+          comp.kind === 'cell' ||
+          comp.kind === 'battery');
       const text = new Text({
         text: labelText,
         style: {
@@ -376,6 +427,189 @@ export class CircuitRenderer {
     const beta = comp.params.beta ?? 3500;
     const kelvin = Math.max(1, (comp.params.temperatureC ?? 25) + 273.15);
     return reference * Math.exp(beta * (1 / kelvin - 1 / 298.15));
+  }
+
+  /**
+   * Live V / I / R chips for every component in schematic mode. Placement is
+   * collision-aware: above, below, right or left of the symbol, avoiding other
+   * components, their designators and previously placed chips.
+   */
+  private drawValueChips(): void {
+    for (const child of [...this.chipRoot.children]) child.destroy({ children: true });
+    this.chipRoot.removeChildren();
+    const state = this.state;
+    if (!state?.showValues || !state.solution) return;
+
+    const zoom = this.view.zoom;
+    const W = 112;
+    const H = 54;
+    const GAP = 12;
+    const toScreen = (p: Point) => ({ x: p.x * zoom + this.view.x, y: p.y * zoom + this.view.y });
+
+    const screenBounds = state.doc.components.map((comp) => {
+      const b = componentBounds(comp);
+      return {
+        x: b.x * zoom + this.view.x,
+        y: b.y * zoom + this.view.y,
+        width: b.width * zoom,
+        height: b.height * zoom,
+      };
+    });
+    const occupied = [...screenBounds];
+    // designator labels live just below each symbol
+    state.doc.components.forEach((comp, index) => {
+      const b = screenBounds[index];
+      occupied.push({ x: b.x + b.width / 2 - 26, y: b.y + b.height + 2, width: 52, height: 24 });
+    });
+
+    const intersects = (
+      a: { x: number; y: number; width: number; height: number },
+      b: { x: number; y: number; width: number; height: number },
+      pad = 6,
+    ) =>
+      a.x < b.x + b.width + pad &&
+      a.x + a.width + pad > b.x &&
+      a.y < b.y + b.height + pad &&
+      a.y + a.height + pad > b.y;
+
+    const ordered = [...state.doc.components].sort((a, b) => a.y - b.y || a.x - b.x);
+    for (const comp of ordered) {
+      if (comp.kind === 'ammeter' || comp.kind === 'voltmeter') continue;
+      const reading = state.solution.components[comp.id];
+      if (!reading || !reading.valid) continue;
+      const index = state.doc.components.indexOf(comp);
+      const b = screenBounds[index];
+      const focus = toScreen({ x: comp.x, y: comp.y });
+      const candidates = [
+        { x: b.x + b.width / 2 - W / 2, y: b.y - H - GAP },
+        { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + GAP + 20 },
+        { x: b.x + b.width + GAP, y: b.y + b.height / 2 - H / 2 },
+        { x: b.x - W - GAP, y: b.y + b.height / 2 - H / 2 },
+      ];
+      const inCanvas = (rect: { x: number; y: number; width: number; height: number }) =>
+        rect.x >= 8 &&
+        rect.y >= 8 &&
+        rect.x + rect.width <= this.width - 8 &&
+        rect.y + rect.height <= this.height - 8;
+      let chosen = candidates[0];
+      let placed = false;
+      for (const candidate of candidates) {
+        const rect = { ...candidate, width: W, height: H };
+        if (inCanvas(rect) && !occupied.some((other) => intersects(rect, other))) {
+          chosen = candidate;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        chosen = {
+          x: Math.max(8, Math.min(chosen.x, this.width - W - 8)),
+          y: Math.max(8, Math.min(chosen.y, this.height - H - 8)),
+        };
+      }
+      occupied.push({ ...chosen, width: W, height: H });
+
+      const chip = new Container();
+      const g = new Graphics();
+      const cx = chosen.x + W / 2;
+      const cy = chosen.y + H / 2;
+      g.moveTo(cx, cy).lineTo(focus.x, focus.y).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.6 });
+      g.roundRect(chosen.x, chosen.y, W, H, 12)
+        .fill({ color: this.palette.chipBg, alpha: 0.94 })
+        .stroke({ width: 1, color: this.palette.chipLine, alpha: 0.95 });
+      g.roundRect(chosen.x + 1, chosen.y + 1, W - 2, H / 2, 11).fill({ color: 0xffffff, alpha: 0.05 });
+      // left accent bar
+      g.roundRect(chosen.x + 6, chosen.y + 9, 2.5, H - 18, 1.25).fill({ color: this.palette.accent, alpha: 0.85 });
+      chip.addChild(g);
+
+      const isSource = comp.kind === 'cell' || comp.kind === 'battery';
+      const third = isSource
+        ? `r  ${(comp.params.internalResistance ?? 0).toFixed(2)} Ω`
+        : `R  ${
+            reading.resistance !== null && Number.isFinite(reading.resistance)
+              ? formatQuantity(reading.resistance, 'resistance')
+              : '—'
+          }`;
+      const rows: { text: string; color: number }[] = [
+        { text: `V  ${formatQuantity(reading.voltageMagnitude, 'voltage')}`, color: this.palette.valueV },
+        { text: `I  ${formatQuantity(reading.currentMagnitude, 'current')}`, color: this.palette.valueI },
+        { text: third, color: this.palette.valueR },
+      ];
+      rows.forEach((row, rowIndex) => {
+        const text = new Text({
+          text: row.text,
+          style: {
+            fontFamily: MONO,
+            fontSize: 10.5,
+            fontWeight: '600',
+            fill: row.color,
+            letterSpacing: 0.2,
+          },
+        });
+        text.position.set(chosen.x + 14, chosen.y + 7 + rowIndex * 14.5);
+        chip.addChild(text);
+      });
+      this.chipRoot.addChild(chip);
+    }
+  }
+
+  /** Live glow for lamps, a breathing selection ring and value-change pulses. */
+  private drawAnimations(dt: number): void {
+    const state = this.state;
+    if (!state) return;
+    this.time += dt;
+    const palette = this.palette;
+    const glow = this.glowLayer;
+    const fx = this.fxLayer;
+    glow.clear();
+    fx.clear();
+    const reduce = state.reduceMotion;
+
+    for (const comp of state.doc.components) {
+      if (comp.kind !== 'lamp') continue;
+      const reading = state.solution?.components[comp.id];
+      if (!reading) continue;
+      const intensity = Math.max(0, Math.min(1, Math.abs(reading.power) / 2.4));
+      if (intensity <= 0.005) continue;
+      const pulse = reduce ? 1 : 1 + 0.055 * Math.sin(this.time * 2.3 + comp.x * 0.013);
+      const base = (16 + intensity * 30) * pulse;
+      const layers = 8;
+      for (let i = 0; i < layers; i += 1) {
+        const k = i / (layers - 1);
+        glow.circle(comp.x, comp.y, base * (1 + k * 1.75)).fill({
+          color: palette.glow,
+          alpha: (0.02 + intensity * 0.055) * (1 - k) * (1 - k),
+        });
+      }
+    }
+
+    const selected = state.doc.components.find((comp) => comp.id === state.selectedId);
+    if (selected && !reduce) {
+      const b = componentBounds(selected);
+      const alpha = 0.3 + 0.14 * Math.sin(this.time * 3.1);
+      fx.roundRect(b.x - 7, b.y - 7, b.width + 14, b.height + 14, 13).stroke({
+        width: 1.6,
+        color: palette.select,
+        alpha,
+      });
+    }
+
+    const now = performance.now();
+    for (const [id, started] of this.flashes) {
+      const age = now - started;
+      if (age > 900) {
+        this.flashes.delete(id);
+        continue;
+      }
+      const comp = state.doc.components.find((c) => c.id === id);
+      if (!comp) continue;
+      const progress = age / 900;
+      fx.circle(comp.x, comp.y, 30 + progress * 48).stroke({
+        width: 2,
+        color: palette.accent,
+        alpha: (1 - progress) * 0.42,
+      });
+    }
   }
 
   private drawOverlay(): void {
@@ -494,8 +728,10 @@ export class CircuitRenderer {
   }
 
   private onTick(dt: number): void {
-    if (!this.state || this.flows.length === 0) {
-      if (this.particleLayer) this.particleLayer.clear();
+    if (!this.state) return;
+    this.drawAnimations(dt);
+    if (this.flows.length === 0) {
+      this.particleLayer.clear();
       return;
     }
     const g = this.particleLayer;
@@ -508,8 +744,8 @@ export class CircuitRenderer {
       for (let i = 0; i < flow.count; i += 1) {
         const distance = (flow.phase + i * gap + flow.total) % flow.total;
         const point = pointAt(flow, distance);
-        g.circle(point.x, point.y, 4.2).fill({ color: this.palette.accent, alpha: 0.14 });
-        g.circle(point.x, point.y, 2.1).fill({ color: this.palette.accent, alpha: 0.95 });
+        g.circle(point.x, point.y, 4.6).fill({ color: this.palette.accent, alpha: 0.16 });
+        g.circle(point.x, point.y, 2.2).fill({ color: this.palette.accent, alpha: 0.95 });
       }
     }
   }
