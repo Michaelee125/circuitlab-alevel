@@ -539,7 +539,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       if (first && width > 0 && height > 0) {
         const bounds = documentBounds(state.doc);
         const scale = Math.min(width / bounds.width, height / bounds.height, 1.4);
-        const zoom = Math.max(0.3, scale * 0.9);
+        const zoom = Math.max(0.3, scale * 0.96);
         return {
           ...next,
           view: {
@@ -557,7 +557,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     const { width, height } = state.viewport;
     if (width <= 1 || height <= 1) return;
     const bounds = documentBounds(state.doc);
-    const zoom = Math.max(0.25, Math.min(width / bounds.width, height / bounds.height, 1.6) * 0.92);
+    const zoom = Math.max(0.25, Math.min(width / bounds.width, height / bounds.height, 1.6) * 0.97);
     set({
       view: {
         zoom,
@@ -602,7 +602,10 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     }),
   setRightTab: (rightTab) => set({ rightTab }),
   setBottomTab: (bottomTab) => set({ bottomTab }),
-  setBottomOpen: (bottomOpen) => set({ bottomOpen }),
+  setBottomOpen: (bottomOpen) => {
+    set({ bottomOpen });
+    if (bottomOpen) setTimeout(() => get().fitView(), 140);
+  },
   setSheet: (mobileSheet) => set({ mobileSheet }),
   setShowGrid: (showGrid) => set({ showGrid }),
 
@@ -659,6 +662,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       rightTab: 'inspector',
     });
     get().zoomToFitSoon();
+    setTimeout(() => get().fitView(), 260);
     get().toastMessage(
       `${t(get().language, 'toast.loaded')}: ${
         get().language === 'zh' ? experiment.title.zh : experiment.title.en

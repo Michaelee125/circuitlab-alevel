@@ -1904,9 +1904,19 @@ textarea.input {
     background: var(--accent-soft);
   }
   .mobile-mode .segmented-item {
-    padding: 5px 7px;
-    font-size: 10px;
+    padding: 5px 6px;
+    font-size: 9.5px;
     min-height: 26px;
+  }
+  .mobile-topbar .lang-select {
+    max-width: 78px;
+  }
+  .mobile-topbar {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .mobile-topbar::-webkit-scrollbar {
+    display: none;
   }
   .mobile-topbar .btn-icon {
     width: 32px;

@@ -326,7 +326,7 @@ export function documentBounds(doc: CircuitDocument): Rect {
     minY = Math.min(minY, b.y);
     maxY = Math.max(maxY, b.y + b.height);
   }
-  const pad = 60;
+  const pad = 36;
   return {
     x: minX - pad,
     y: minY - pad,

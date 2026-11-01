@@ -62,8 +62,9 @@ stays at the supply voltage and only the LDR branch current changes.
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
 | Live V / I / R chips beside each component (collision-aware, constant size at any zoom) | ✅ |
-| Animated feedback: lamp glow scales with power, value-change pulses, current particles | ✅ |
+| Animated feedback: lamp glow scales with power, glowing comet-style current particles, value-change pulses | ✅ |
 | Apple-style settings popover (appearance, quality, values, grid, pin, circuit actions) | ✅ |
+| One-tap dark / light theme toggle in the desktop and phone top bars | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |
 | Save/load (IndexedDB), JSON import/export, share link | ✅ |

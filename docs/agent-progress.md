@@ -40,6 +40,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Added an optional, collision-aware V / I / R overlay next to every component in both visual modes. Chips are drawn in screen space so they stay legible at any zoom, avoid other components and each other, and are clamped inside the canvas.
 - Updated the shared UI palette, chart colours and typography to match the new design language; the light theme is a full Apple-style light surface.
 
+## Second visual pass (third review)
+
+- Redrew every realistic component again with richer materials: ceramic resistor with beveled colour bands and metal end caps, glass bulb with screw base and filament supports, cylindrical cell with wrapper, "+" marking and copper cap, LDR disc with gold serpentine and glass highlight, aluminium capacitor with vent and sleeve, diode with metal band and printed symbol, meters with recessed LCD, scanlines and screw posts, switch with brushed plate and chrome lever, plated terminal posts everywhere.
+- Restored the current animation (it had become nearly invisible against the new wire colour) and upgraded it to additive comet trails whose speed, size and colour respond to the current; particle size is normalised so it stays tasteful at any zoom.
+- Added a one-tap dark / light theme toggle back to both the desktop and mobile top bars.
+- Fit-to-view is tighter, and the canvas now shrinks above the chart dock so circuits (including voltmeters) are never hidden behind the graph panel.
+
 ## Known limitations
 
 - Exam marking is software-authored keyword practice marking (English only).

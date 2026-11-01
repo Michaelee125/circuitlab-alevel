@@ -81,6 +81,19 @@ export function LanguagePicker({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function ThemeToggle() {
+  const theme = useCircuitStore((s) => s.theme);
+  const language = useCircuitStore((s) => s.language);
+  const setTheme = useCircuitStore((s) => s.setTheme);
+  return (
+    <IconButton
+      icon={theme === 'dark' ? 'moon' : 'sun'}
+      label={`${t(language, 'view.theme')}: ${theme === 'dark' ? t(language, 'view.dark') : t(language, 'view.light')}`}
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+    />
+  );
+}
+
 function MenuSwitch({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
   return (
     <button
@@ -275,6 +288,7 @@ export function TopBar() {
       <div className="topbar-spacer" />
       <LanguagePicker />
       <div className="topbar-group">
+        <ThemeToggle />
         <SettingsMenu />
         <IconButton
           icon="chart"
@@ -296,6 +310,8 @@ export function MobileTopBar() {
   const mode = useCircuitStore((s) => s.mode);
   const setMode = useCircuitStore((s) => s.setMode);
   const setSheet = useCircuitStore((s) => s.setSheet);
+  const theme = useCircuitStore((s) => s.theme);
+  const setTheme = useCircuitStore((s) => s.setTheme);
   const experimentId = useCircuitStore((s) => s.experimentId);
   const experiment = experimentId ? getExperiment(experimentId) : null;
 
@@ -317,6 +333,12 @@ export function MobileTopBar() {
       </div>
       <IconButton icon="flask" label={t(language, 'experiments.library')} size={16} onClick={() => setSheet('experiments')} />
       <LanguagePicker compact />
+      <IconButton
+        icon={theme === 'dark' ? 'moon' : 'sun'}
+        label={t(language, 'view.theme')}
+        size={16}
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      />
       <IconButton icon="menu" label={t(language, 'save.title')} size={16} onClick={() => setSheet('saved')} />
       {experiment && <span style={{ display: 'none' }}>{experiment.title.en}</span>}
     </header>

@@ -19,6 +19,7 @@ export interface Palette {
   glass: number;
   glow: number;
   danger: number;
+  good: number;
   displayBg: number;
   displayText: number;
   shadow: number;
@@ -54,6 +55,7 @@ const DARK: Palette = {
   glass: 0xbfe9ff,
   glow: 0xffb547,
   danger: 0xff453a,
+  good: 0x30d158,
   displayBg: 0x05080b,
   displayText: 0x64ffd2,
   shadow: 0x000000,
@@ -89,6 +91,7 @@ const LIGHT: Palette = {
   glass: 0xd3efff,
   glow: 0xffa726,
   danger: 0xd70015,
+  good: 0x248a3d,
   displayBg: 0xeef7ff,
   displayText: 0x0479a8,
   shadow: 0x274766,

@@ -348,6 +348,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       <div
         ref={hostRef}
         className="canvas-host"
+        style={{ bottom: dockOpen ? 300 : 0 }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

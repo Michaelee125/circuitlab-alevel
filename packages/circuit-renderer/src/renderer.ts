@@ -119,6 +119,7 @@ export class CircuitRenderer {
       this.labelRoot,
     );
     this.glowLayer.blendMode = 'add';
+    this.particleLayer.blendMode = 'add';
     app.stage.addChild(this.world);
     // Value chips are drawn in screen space so they stay legible at any zoom.
     app.stage.addChild(this.chipRoot);
@@ -572,13 +573,14 @@ export class CircuitRenderer {
       const intensity = Math.max(0, Math.min(1, Math.abs(reading.power) / 2.4));
       if (intensity <= 0.005) continue;
       const pulse = reduce ? 1 : 1 + 0.055 * Math.sin(this.time * 2.3 + comp.x * 0.013);
+      const schemaDamp = state.viewMode === 'schematic' ? 0.55 : 1;
       const base = (16 + intensity * 30) * pulse;
-      const layers = 8;
+      const layers = 12;
       for (let i = 0; i < layers; i += 1) {
-        const k = i / (layers - 1);
-        glow.circle(comp.x, comp.y, base * (1 + k * 1.75)).fill({
+        const t = i / (layers - 1);
+        glow.circle(comp.x, comp.y, base * (1 + t * 1.9)).fill({
           color: palette.glow,
-          alpha: (0.02 + intensity * 0.055) * (1 - k) * (1 - k),
+          alpha: (0.012 + intensity * 0.032) * schemaDamp * (1 - t) * (1 - t) * (1 - t),
         });
       }
     }
@@ -714,7 +716,7 @@ export class CircuitRenderer {
       const inward = useFrom ? inwardFrom : inwardTo;
       const magnitude = Math.abs(inward);
       if (magnitude < 1e-7) continue;
-      const count = Math.max(2, Math.round((total / 85) * density));
+      const count = Math.max(3, Math.round((total / 70) * density));
       this.flows.push({
         points,
         segments,
@@ -737,15 +739,28 @@ export class CircuitRenderer {
     const g = this.particleLayer;
     g.clear();
     const speedScale = this.state.reduceMotion ? 0.35 : 1;
+    const accent = this.palette.accent;
+    const hot = this.palette.glow;
+    // Keep the comets a consistent size on screen at any zoom.
+    const k = Math.max(0.55, Math.min(1.8, 1 / this.view.zoom));
     for (const flow of this.flows) {
-      const speed = (26 + Math.min(1, flow.magnitude / 2) * 90) * speedScale;
+      const intensity = Math.min(1, flow.magnitude / 1.5);
+      const speed = (40 + intensity * 120) * speedScale;
       flow.phase = (flow.phase + speed * dt * flow.direction + flow.total * 2) % flow.total;
       const gap = flow.total / flow.count;
+      // energetic charge looks warmer
+      const coreColor = intensity > 0.75 ? hot : 0xffffff;
       for (let i = 0; i < flow.count; i += 1) {
         const distance = (flow.phase + i * gap + flow.total) % flow.total;
         const point = pointAt(flow, distance);
-        g.circle(point.x, point.y, 4.6).fill({ color: this.palette.accent, alpha: 0.16 });
-        g.circle(point.x, point.y, 2.2).fill({ color: this.palette.accent, alpha: 0.95 });
+        // comet trail behind the carrier
+        const trail = pointAt(flow, (distance - 14 * flow.direction + flow.total * 2) % flow.total);
+        g.moveTo(trail.x, trail.y)
+          .lineTo(point.x, point.y)
+          .stroke({ width: 2.6 * k, color: accent, alpha: 0.28 + intensity * 0.2, cap: 'round' });
+        g.circle(point.x, point.y, (6.5 + intensity * 3) * k).fill({ color: accent, alpha: 0.1 + intensity * 0.06 });
+        g.circle(point.x, point.y, 4.4 * k).fill({ color: accent, alpha: 0.35 + intensity * 0.2 });
+        g.circle(point.x, point.y, 2.1 * k).fill({ color: coreColor, alpha: 0.95 });
       }
     }
   }

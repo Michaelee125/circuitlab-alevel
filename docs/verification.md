@@ -43,6 +43,9 @@ site.
 | Live component values | ✅ settings/toolbar toggle, collision-aware V/I/R chips |
 | Apple-style settings menu | ✅ frosted popover with switches and segmented controls |
 | Lamp brightness feedback | ✅ glow scales from a faint halo at 2 V to a wide warm halo at 12 V |
+| Current animation | ✅ additive comet particles visible at default and high zoom |
+| Theme toggle | ✅ one-tap sun/moon button in the desktop and mobile top bars |
+| Chart dock clearance | ✅ canvas shrinks above the dock; voltmeter stays visible |
 | Console errors | 0 |
 | Failed network requests | 0 |
 
