@@ -83,6 +83,11 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Added a general reasoning rule that explains any single parameter change from the numerical before/after solutions: resistance-like changes on any component (rheostat, lamp, diode), sensors, supply EMF, internal resistance, switches and capacitors. It builds cause → resistance / total resistance → current → per-component p.d.s → lamp brightness → meter readings → unaffected parallel branches, and only asserts directions verified by the solver. Specialised rules still take precedence for the classic teaching cases.
 - New regression tests: 65 unit tests (general-network reasoning cases, a multi-supply guard, and component-avoidance routing) and 39 Playwright checks.
 
+## Transparent value cards (ninth review)
+
+- The per-component V / I / R cards are now real DOM Liquid Glass instead of painted rectangles: the renderer keeps a pointer-transparent layer inside the canvas host, reuses one element per component, and updates positions on every pan/zoom. Each card uses `backdrop-filter: blur(20px) saturate(190%)` with a translucent gradient, hairline border, inner highlight and accent rail, so the circuit is visibly frosted behind the data. Leader lines are drawn from the card edge to the component so they never cross the glass.
+- Light and dark variants, compact phone cards, and the strict no-overlap placement are preserved. The values e2e test asserts three cards and a blurring backdrop filter.
+
 ## Known limitations
 
 - Exam marking is software-authored keyword practice marking (English only).

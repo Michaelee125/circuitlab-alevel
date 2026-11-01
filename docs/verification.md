@@ -42,6 +42,7 @@ site.
 | Liquid Glass UI | ✅ pure-black dark body (`rgb(0, 0, 0)`), frosted panels, iOS controls |
 | Live component values | ✅ labelled Values switch in the toolbar (plus settings/help switches), persisted |
 | Value card placement | ✅ 8 candidate positions; refuses any overlap with components, labels, cards or wires |
+| Value card material | ✅ DOM cards with computed `backdrop-filter: blur(20px) saturate(1.9)`; circuit visibly blurs behind them |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |

@@ -25,6 +25,9 @@ circuit — not from keyword matching.
 | ![Voltmeter close-up](docs/images/glass-voltmeter.png) | ![Realistic lamp with power-scaled glow](docs/images/glass-lamp-glow.png) |
 | Apple-style settings menu | 中文界面 |
 | ![Settings popover](docs/images/glass-settings.png) | ![Chinese interface](docs/images/glass-chinese.png) |
+| Transparent Liquid Glass value cards | |
+| --- | --- |
+| ![Frosted value cards over the circuit](docs/images/glass-value-cards.png) | |
 | Phone layout with compact cards (floating glass tab bar) | Liquid Glass bottom sheet |
 | --- | --- |
 | ![Phone layout with compact value cards](docs/images/glass-mobile.png) | ![Mobile glass sheet](docs/images/glass-mobile-sheet.png) |
@@ -70,7 +73,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
-| Live V / I / R cards in a Liquid Glass frame, toggled by a labelled **Values** switch | ✅ |
+| Live V / I / R cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch | ✅ |
 | Strict card placement: never overlaps components, designators, other cards or wires (hidden if no free spot) | ✅ |
 | Meter readings auto-fit their screen and are kept clear of return wires | ✅ |
 | Animated feedback: lamp glow scales with power, glowing comet-style current particles, value-change pulses | ✅ |

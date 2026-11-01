@@ -231,6 +231,9 @@ test.describe('CircuitLab desktop', () => {
     await settings.getByRole('switch', { name: 'Show values' }).click();
     await expect(state(page)).toHaveAttribute('data-show-values', 'true');
     await expect(page.getByRole('button', { name: 'Show values' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.value-chip')).toHaveCount(3);
+    const glass = await page.locator('.value-chip').first().evaluate((el) => getComputedStyle(el).backdropFilter);
+    expect(glass).toContain('blur');
     await page.keyboard.press('Escape');
     await expect(settings).toHaveCount(0);
   });

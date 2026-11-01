@@ -1,4 +1,4 @@
-import { Application, Container, FillGradient, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics, Text } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import {
   componentBounds,
@@ -16,7 +16,7 @@ import type {
 import type { CircuitSolution } from '@circuitlab/physics-engine';
 import { formatQuantity } from '@circuitlab/i18n';
 import { paletteFor, type Palette } from './palette';
-import { drawRealisticBody, drawSchematicBody, mixColor } from './drawing';
+import { drawRealisticBody, drawSchematicBody } from './drawing';
 
 export interface RenderState {
   doc: CircuitDocument;
@@ -73,7 +73,9 @@ export class CircuitRenderer {
   private particleLayer = new Graphics();
   private glowLayer = new Graphics();
   private fxLayer = new Graphics();
-  private chipRoot = new Container();
+  private leaderLayer = new Graphics();
+  private chipLayer: HTMLDivElement | null = null;
+  private chipElements = new Map<string, { root: HTMLDivElement; rows: HTMLSpanElement[]; content: string }>();
   private labelRoot = new Container();
   private tickerHandler: ((ticker: Ticker) => void) | null = null;
   private state: RenderState | null = null;
@@ -121,8 +123,17 @@ export class CircuitRenderer {
     this.glowLayer.blendMode = 'add';
     this.particleLayer.blendMode = 'add';
     app.stage.addChild(this.world);
-    // Value chips are drawn in screen space so they stay legible at any zoom.
-    app.stage.addChild(this.chipRoot);
+    // Leader lines for the value cards live in screen space; the cards
+    // themselves are DOM nodes so they can use real backdrop blur.
+    app.stage.addChild(this.leaderLayer);
+    const host = canvas.parentElement;
+    if (host) {
+      const layer = document.createElement('div');
+      layer.className = 'value-layer';
+      layer.setAttribute('aria-hidden', 'true');
+      host.appendChild(layer);
+      this.chipLayer = layer;
+    }
     this.tickerHandler = (ticker: Ticker) => this.onTick(ticker.deltaMS / 1000);
     app.ticker.add(this.tickerHandler);
     app.ticker.maxFPS = quality === 'low' ? 30 : 60;
@@ -132,6 +143,10 @@ export class CircuitRenderer {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    for (const entry of this.chipElements.values()) entry.root.remove();
+    this.chipElements.clear();
+    this.chipLayer?.remove();
+    this.chipLayer = null;
     if (this.app) {
       if (this.tickerHandler) this.app.ticker.remove(this.tickerHandler);
       this.app.destroy(false, { children: true });
@@ -436,16 +451,21 @@ export class CircuitRenderer {
    * components, their designators and previously placed chips.
    */
   private drawValueChips(): void {
-    for (const child of [...this.chipRoot.children]) child.destroy({ children: true });
-    this.chipRoot.removeChildren();
+    this.leaderLayer.clear();
     const state = this.state;
-    if (!state?.showValues || !state.solution) return;
+    const layer = this.chipLayer;
+    if (!layer) return;
+    if (!state?.showValues || !state.solution) {
+      for (const entry of this.chipElements.values()) entry.root.remove();
+      this.chipElements.clear();
+      return;
+    }
 
     const zoom = this.view.zoom;
     // Narrow canvases (phones) get compact cards so several can sit side by side.
     const compact = this.width < 560;
-    const W = compact ? 80 : 108;
-    const H = compact ? 44 : 52;
+    const W = compact ? 80 : 110;
+    const H = compact ? 44 : 54;
     const GAP = 12;
     const toScreen = (p: Point) => ({ x: p.x * zoom + this.view.x, y: p.y * zoom + this.view.y });
 
@@ -459,7 +479,6 @@ export class CircuitRenderer {
       };
     });
     const occupied = [...screenBounds];
-    // designator labels live just below each symbol
     state.doc.components.forEach((comp, index) => {
       const b = screenBounds[index];
       occupied.push({ x: b.x + b.width / 2 - 26, y: b.y + b.height + 2, width: 52, height: 24 });
@@ -497,6 +516,13 @@ export class CircuitRenderer {
       a.y < b.y + b.height + pad &&
       a.y + a.height + pad > b.y;
 
+    const placements: {
+      id: string;
+      chosen: { x: number; y: number };
+      focus: Point;
+      rows: { key: string; text: string; tone: 'v' | 'i' | 'r' }[];
+    }[] = [];
+
     const ordered = [...state.doc.components].sort((a, b) => a.y - b.y || a.x - b.x);
     for (const comp of ordered) {
       if (comp.kind === 'ammeter' || comp.kind === 'voltmeter') continue;
@@ -522,8 +548,6 @@ export class CircuitRenderer {
         rect.y >= topInset &&
         rect.x + rect.width <= this.width - 8 &&
         rect.y + rect.height <= this.height - 10;
-      // Only place a chip where it overlaps nothing at all. If the area is too
-      // crowded the chip is omitted rather than drawn on top of an element.
       let chosen: { x: number; y: number } | null = null;
       for (const candidate of candidates) {
         const rect = { ...candidate, width: W, height: H };
@@ -535,82 +559,77 @@ export class CircuitRenderer {
       }
       if (!chosen) continue;
       occupied.push({ ...chosen, width: W, height: H });
-      const chip = new Container();
-      const g = new Graphics();
-      const cx = chosen.x + W / 2;
-      const cy = chosen.y + H / 2;
-      const dark = this.palette.chipBg !== 0xffffff;
-      // leader line sits behind the glass
-      const radius = compact ? 11 : 15;
-      g.moveTo(cx, cy).lineTo(focus.x, focus.y).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.7 });
-      // soft contact shadow
-      g.roundRect(chosen.x + 1, chosen.y + (compact ? 3 : 4), W, H, radius).fill({
-        color: 0x000000,
-        alpha: dark ? 0.34 : 0.16,
-      });
-      // frosted body
-      const topColor = mixColor(this.palette.chipBg, 0xffffff, dark ? 0.1 : 0);
-      const body = new FillGradient({
-        type: 'linear',
-        start: { x: 0, y: 0 },
-        end: { x: 0, y: 1 },
-        colorStops: [
-          { offset: 0, color: topColor },
-          { offset: 1, color: this.palette.chipBg },
-        ],
-        textureSpace: 'local',
-      });
-      g.roundRect(chosen.x, chosen.y, W, H, radius).fill(body);
-      g.roundRect(chosen.x, chosen.y, W, H, radius).fill({ color: this.palette.accent, alpha: 0.035 });
-      // glass sheen + inner hairline
-      g.roundRect(chosen.x + 1.5, chosen.y + 1.5, W - 3, H * 0.46, radius - 2).fill({
-        color: 0xffffff,
-        alpha: dark ? 0.08 : 0.5,
-      });
-      g.roundRect(chosen.x, chosen.y, W, H, radius).stroke({ width: 1, color: this.palette.chipLine, alpha: 0.95 });
-      g.roundRect(chosen.x + 1, chosen.y + 1, W - 2, H - 2, radius - 1).stroke({
-        width: 0.6,
-        color: 0xffffff,
-        alpha: dark ? 0.12 : 0.8,
-      });
-      // left accent rail
-      g.roundRect(chosen.x + (compact ? 5 : 6.5), chosen.y + (compact ? 7 : 9), 2.2, H - (compact ? 14 : 18), 1.1).fill({
-        color: this.palette.accent,
-        alpha: 0.9,
-      });
-      chip.addChild(g);
 
       const isSource = comp.kind === 'cell' || comp.kind === 'battery';
-      const third = isSource
-        ? `r  ${(comp.params.internalResistance ?? 0).toFixed(2)} Ω`
-        : `R  ${
-            reading.resistance !== null && Number.isFinite(reading.resistance)
-              ? formatQuantity(reading.resistance, 'resistance')
-              : '—'
-          }`;
-      const rows: { text: string; color: number }[] = [
-        { text: `V  ${formatQuantity(reading.voltageMagnitude, 'voltage')}`, color: this.palette.valueV },
-        { text: `I  ${formatQuantity(reading.currentMagnitude, 'current')}`, color: this.palette.valueI },
-        { text: third, color: this.palette.valueR },
-      ];
-      rows.forEach((row, rowIndex) => {
-        const text = new Text({
-          text: row.text,
-          style: {
-            fontFamily: MONO,
-            fontSize: compact ? 7.7 : 10.5,
-            fontWeight: '600',
-            fill: row.color,
-            letterSpacing: 0.15,
-          },
-        });
-        text.position.set(
-          chosen.x + (compact ? 10 : 14),
-          chosen.y + (compact ? 5 : 7) + rowIndex * (compact ? 11.6 : 14.5),
-        );
-        chip.addChild(text);
+      const resistance =
+        reading.resistance !== null && Number.isFinite(reading.resistance)
+          ? formatQuantity(reading.resistance, 'resistance')
+          : '—';
+      placements.push({
+        id: comp.id,
+        chosen,
+        focus,
+        rows: [
+          { key: 'V', text: formatQuantity(reading.voltageMagnitude, 'voltage'), tone: 'v' },
+          { key: 'I', text: formatQuantity(reading.currentMagnitude, 'current'), tone: 'i' },
+          isSource
+            ? { key: 'r', text: `${(comp.params.internalResistance ?? 0).toFixed(2)} Ω`, tone: 'r' }
+            : { key: 'R', text: resistance, tone: 'r' },
+        ],
       });
-      this.chipRoot.addChild(chip);
+    }
+
+    const keep = new Set<string>();
+    for (const placement of placements) {
+      keep.add(placement.id);
+      let entry = this.chipElements.get(placement.id);
+      if (!entry) {
+        const root = document.createElement('div');
+        const rows = [0, 1, 2].map(() => {
+          const span = document.createElement('span');
+          span.className = 'value-row';
+          root.appendChild(span);
+          return span;
+        });
+        const chipClass = `value-chip${compact ? ' is-compact' : ''}`;
+        root.className = chipClass;
+        layer.appendChild(root);
+        entry = { root, rows, content: '' };
+        this.chipElements.set(placement.id, entry);
+      }
+      entry.root.className = `value-chip${compact ? ' is-compact' : ''}`;
+      const content = placement.rows.map((row) => `${row.key}|${row.tone}|${row.text}`).join('|');
+      if (entry.content !== content) {
+        entry.content = content;
+        placement.rows.forEach((row, i) => {
+          const span = entry.rows[i];
+          span.className = `value-row row-${row.tone}`;
+          span.innerHTML = `<span class="value-key">${row.key}</span><span class="value-value">${row.text}</span>`;
+        });
+      }
+      entry.root.style.left = `${placement.chosen.x}px`;
+      entry.root.style.top = `${placement.chosen.y}px`;
+      entry.root.style.width = `${W}px`;
+      entry.root.style.height = `${H}px`;
+
+      // leader starts at the card edge so the transparent glass is not crossed
+      const cx = placement.chosen.x + W / 2;
+      const cy = placement.chosen.y + H / 2;
+      const dx = placement.focus.x - cx;
+      const dy = placement.focus.y - cy;
+      const sx = dx !== 0 ? W / 2 / Math.abs(dx) : Number.POSITIVE_INFINITY;
+      const sy = dy !== 0 ? H / 2 / Math.abs(dy) : Number.POSITIVE_INFINITY;
+      const scale = Math.min(sx, sy);
+      this.leaderLayer
+        .moveTo(cx + dx * scale, cy + dy * scale)
+        .lineTo(placement.focus.x, placement.focus.y)
+        .stroke({ width: 1, color: this.palette.chipLine, alpha: 0.55 });
+    }
+
+    for (const [id, entry] of this.chipElements) {
+      if (keep.has(id)) continue;
+      entry.root.remove();
+      this.chipElements.delete(id);
     }
   }
 
