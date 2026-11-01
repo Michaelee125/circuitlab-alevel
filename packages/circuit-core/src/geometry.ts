@@ -88,8 +88,9 @@ function dedupeCollinear(points: Point[]): Point[] {
 }
 
 /**
- * Orthogonal wire route between two terminals. The route leaves each terminal
+ * Orthogonal route between two terminals. The route leaves each terminal
  * perpendicular to its component body so wires never overlap the symbol.
+ * `lane` offsets the middle segment so near-identical wires can be separated.
  */
 export function wirePath(
   from: Point,
@@ -97,6 +98,7 @@ export function wirePath(
   to: Point,
   toNormal: Point,
   stub = 22,
+  lane = 0,
 ): Point[] {
   const a1 = { x: from.x + fromNormal.x * stub, y: from.y + fromNormal.y * stub };
   const b1 = { x: to.x + toNormal.x * stub, y: to.y + toNormal.y * stub };
@@ -110,22 +112,28 @@ export function wirePath(
     Math.abs(from.x - to.x) > 280 &&
     Math.abs(from.y - to.y) < 48
   ) {
-    const laneY = Math.max(from.y, to.y) + 170;
+    const laneY = Math.max(from.y, to.y) + 170 + lane;
+    // Shift both drops with the lane so two parallel return wires are fully
+    // separated, not just their horizontal runs.
+    const dropA = a1.x + lane;
+    const dropB = b1.x + lane;
     return dedupeCollinear([
       from,
       a1,
-      { x: a1.x, y: laneY },
-      { x: b1.x, y: laneY },
+      { x: dropA, y: a1.y },
+      { x: dropA, y: laneY },
+      { x: dropB, y: laneY },
+      { x: dropB, y: b1.y },
       b1,
       to,
     ]);
   }
   const pts: Point[] = [from, a1];
   if (fromHorizontal && toHorizontal) {
-    const midX = (a1.x + b1.x) / 2;
+    const midX = (a1.x + b1.x) / 2 + lane;
     pts.push({ x: midX, y: a1.y }, { x: midX, y: b1.y });
   } else if (!fromHorizontal && !toHorizontal) {
-    const midY = (a1.y + b1.y) / 2;
+    const midY = (a1.y + b1.y) / 2 + lane;
     pts.push({ x: a1.x, y: midY }, { x: b1.x, y: midY });
   } else if (fromHorizontal) {
     pts.push({ x: b1.x, y: a1.y });
@@ -149,8 +157,7 @@ export function wireEndpoints(
   return { from: terminalWorld(a, ta), to: terminalWorld(b, tb) };
 }
 
-/** Full polyline for a wire, including the routing stubs. */
-export function wirePolyline(doc: CircuitDocument, wire: Wire): Point[] {
+function baseWirePolyline(doc: CircuitDocument, wire: Wire, lane: number): Point[] {
   const a = doc.components.find((c) => c.id === wire.from.componentId);
   const b = doc.components.find((c) => c.id === wire.to.componentId);
   if (!a || !b) return [];
@@ -162,7 +169,108 @@ export function wirePolyline(doc: CircuitDocument, wire: Wire): Point[] {
     terminalNormal(a, ta.id),
     terminalWorld(b, tb),
     terminalNormal(b, tb.id),
+    22,
+    lane,
   );
+}
+
+interface AxisSegment {
+  horizontal: boolean;
+  fixed: number;
+  start: number;
+  end: number;
+  a: Point;
+  b: Point;
+}
+
+function axisSegments(points: Point[]): AxisSegment[] {
+  const segments: AxisSegment[] = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (Math.abs(a.y - b.y) < 0.5 && Math.abs(a.x - b.x) > 0.5) {
+      segments.push({
+        horizontal: true,
+        fixed: a.y,
+        start: Math.min(a.x, b.x),
+        end: Math.max(a.x, b.x),
+        a,
+        b,
+      });
+    } else if (Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) > 0.5) {
+      segments.push({
+        horizontal: false,
+        fixed: a.x,
+        start: Math.min(a.y, b.y),
+        end: Math.max(a.y, b.y),
+        a,
+        b,
+      });
+    }
+  }
+  return segments;
+}
+
+/**
+ * True when two routes run along the same corridor for a visible distance.
+ * For multi-segment routes the terminal leads are ignored: wires leaving the
+ * same terminal may share the short stub, but the routed body must be
+ * separated. Straight two-point wires are compared in full.
+ */
+export function pathsOverlap(a: Point[], b: Point[], tolerance = 7): boolean {
+  const core = (segments: AxisSegment[]) =>
+    segments.length > 2 ? segments.slice(1, -1) : segments;
+  const segmentsA = core(axisSegments(a));
+  const segmentsB = core(axisSegments(b));
+  for (const sa of segmentsA) {
+    for (const sb of segmentsB) {
+      if (sa.horizontal !== sb.horizontal) continue;
+      if (Math.abs(sa.fixed - sb.fixed) > tolerance) continue;
+      const overlap = Math.min(sa.end, sb.end) - Math.max(sa.start, sb.start);
+      if (overlap > 14) return true;
+    }
+  }
+  return false;
+}
+
+const routeCache = new WeakMap<CircuitDocument, Record<string, Point[]>>();
+
+/**
+ * Route every wire once, shifting a wire into a parallel lane when it would
+ * otherwise sit exactly on top of an earlier wire. Results are cached per
+ * immutable document so rendering and hit testing agree.
+ */
+export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
+  const cached = routeCache.get(doc);
+  if (cached) return cached;
+  const routes: Record<string, Point[]> = {};
+  const placed: Point[][] = [];
+  for (const wire of doc.wires) {
+    const base = baseWirePolyline(doc, wire, 0);
+    if (base.length === 0) {
+      routes[wire.id] = base;
+      continue;
+    }
+    let chosen = base;
+    if (placed.some((existing) => pathsOverlap(base, existing))) {
+      for (const lane of [22, -22, 44, -44]) {
+        const candidate = baseWirePolyline(doc, wire, lane);
+        if (candidate.length > 0 && !placed.some((existing) => pathsOverlap(candidate, existing))) {
+          chosen = candidate;
+          break;
+        }
+      }
+    }
+    routes[wire.id] = chosen;
+    placed.push(chosen);
+  }
+  routeCache.set(doc, routes);
+  return routes;
+}
+
+/** Full polyline for a wire, including the routing stubs and lane offsets. */
+export function wirePolyline(doc: CircuitDocument, wire: Wire): Point[] {
+  return getWireRoutes(doc)[wire.id] ?? [];
 }
 
 export function distance(a: Point, b: Point): number {

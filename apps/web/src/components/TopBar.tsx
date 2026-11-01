@@ -1,10 +1,11 @@
-import { t, UI_LANGUAGES, componentName } from '@circuitlab/i18n';
+import { t, componentName } from '@circuitlab/i18n';
 import type { Language } from '@circuitlab/circuit-core';
 import { Icon, IconButton, Segmented } from '@circuitlab/ui';
 import { getExperiment } from '@circuitlab/teaching-engine';
 import { useCircuitStore } from '../store';
 
 function Brand({ compact = false }: { compact?: boolean }) {
+  const language = useCircuitStore((s) => s.language);
   return (
     <div className="brand">
       <div className="brand-mark">
@@ -17,7 +18,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="brand-text">
         <span className="brand-title">CircuitLab</span>
-        {!compact && <span className="brand-sub">{t('en', 'app.tagline')}</span>}
+        {!compact && <span className="brand-sub">{t(language, 'app.tagline')}</span>}
       </div>
     </div>
   );
@@ -43,22 +44,38 @@ function ModeSwitch({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function LanguageControl() {
+/**
+ * Three language options are always reachable: a segmented control on desktop
+ * and a native select on phones (where the top bar has less room).
+ */
+export function LanguagePicker({ compact = false }: { compact?: boolean }) {
   const language = useCircuitStore((s) => s.language);
   const setLanguage = useCircuitStore((s) => s.setLanguage);
-  return (
-    <div className="hide-md">
-      <Segmented
+  if (compact) {
+    return (
+      <select
+        className="lang-select"
+        aria-label="Language"
         value={language}
-        ariaLabel="Language"
-        onChange={(value) => setLanguage(value)}
-        options={UI_LANGUAGES.map((option) => ({
-          id: option.id,
-          label: option.id === 'en' ? 'EN' : option.id === 'zh' ? '中文' : 'EN/中',
-          title: option.label,
-        }))}
-      />
-    </div>
+        onChange={(event) => setLanguage(event.target.value as Language)}
+      >
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+        <option value="bilingual">EN + 中文</option>
+      </select>
+    );
+  }
+  return (
+    <Segmented
+      value={language}
+      ariaLabel="Language"
+      onChange={(value) => setLanguage(value)}
+      options={[
+        { id: 'en', label: 'EN', title: 'English' },
+        { id: 'zh', label: '中文', title: '中文' },
+        { id: 'bilingual', label: 'EN/中', title: 'English + 中文' },
+      ]}
+    />
   );
 }
 
@@ -108,7 +125,7 @@ export function TopBar() {
         </span>
       )}
       <div className="topbar-spacer" />
-      <LanguageControl />
+      <LanguagePicker />
       <div className="topbar-group">
         <ThemeToggle />
         <IconButton
@@ -130,15 +147,9 @@ export function MobileTopBar() {
   const language = useCircuitStore((s) => s.language);
   const mode = useCircuitStore((s) => s.mode);
   const setMode = useCircuitStore((s) => s.setMode);
-  const theme = useCircuitStore((s) => s.theme);
-  const setTheme = useCircuitStore((s) => s.setTheme);
   const setSheet = useCircuitStore((s) => s.setSheet);
   const experimentId = useCircuitStore((s) => s.experimentId);
   const experiment = experimentId ? getExperiment(experimentId) : null;
-  const cycleLanguage = () => {
-    const next: Language = language === 'en' ? 'zh' : language === 'zh' ? 'bilingual' : 'en';
-    useCircuitStore.getState().setLanguage(next);
-  };
 
   return (
     <header className="mobile-topbar">
@@ -157,18 +168,7 @@ export function MobileTopBar() {
         />
       </div>
       <IconButton icon="flask" label={t(language, 'experiments.library')} size={16} onClick={() => setSheet('experiments')} />
-      <IconButton
-        icon="globe"
-        label={t(language, 'view.language')}
-        size={16}
-        onClick={cycleLanguage}
-      />
-      <IconButton
-        icon={theme === 'dark' ? 'moon' : 'sun'}
-        label={t(language, 'view.theme')}
-        size={16}
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      />
+      <LanguagePicker compact />
       <IconButton icon="menu" label={t(language, 'save.title')} size={16} onClick={() => setSheet('saved')} />
       {experiment && <span style={{ display: 'none' }}>{experiment.title.en}</span>}
     </header>

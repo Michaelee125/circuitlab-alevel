@@ -82,7 +82,7 @@ test.describe('CircuitLab mobile', () => {
     await expect(state(page)).toHaveAttribute('data-view-mode', 'realistic');
     await page.getByRole('tab', { name: 'Schematic' }).click();
     await expect(state(page)).toHaveAttribute('data-view-mode', 'schematic');
-    await page.getByRole('button', { name: 'Language' }).click();
+    await page.locator('.lang-select').selectOption('zh');
     await expect(state(page)).toHaveAttribute('data-language', 'zh');
     await expect(page.locator('.mobile-tab').first()).toContainText('元件库');
   });

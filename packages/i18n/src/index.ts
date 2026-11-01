@@ -81,6 +81,9 @@ const D: Record<string, Entry> = {
   'properties.beta': ['Thermistor B value', '热敏电阻 B 值'],
   'properties.gamma': ['LDR sensitivity', 'LDR 灵敏度'],
   'properties.derivedResistance': ['Effective resistance', '有效电阻'],
+  'properties.idealAmmeter': ['Ideal ammeter: R ≈ 0 Ω, connected in series.', '理想电流表：内阻 ≈ 0 Ω，串联接入。'],
+  'properties.idealVoltmeter': ['Ideal voltmeter: R ≈ ∞, connected in parallel.', '理想电压表：内阻 ≈ ∞，并联接入。'],
+  'experiments.count': ['{n} runnable experiments', '{n} 个可运行实验'],
   'measure.current': ['Current', '电流'],
   'measure.voltage': ['p.d.', '电压'],
   'measure.power': ['Power', '功率'],
@@ -105,6 +108,13 @@ const D: Record<string, Entry> = {
   'explain.after': ['After', '变化后'],
   'explain.change': ['Change', '变化'],
   'explain.highlight': ['Highlight in circuit', '在电路中高亮'],
+  'explain.pin': ['Keep explanation visible', '常驻显示讲解'],
+  'explain.unpin': ['Stop keeping explanation visible', '取消常驻讲解'],
+  'explain.pinned': ['Explanation', '讲解'],
+  'explain.pinHint': ['Pinned explanations stay visible while you adjust the circuit.', '常驻讲解会在调整电路时一直显示。'],
+  'properties.terminalPd': ['Terminal p.d.', '端电压'],
+  'properties.lostVolts': ['Lost volts (I·r)', '内阻损失电压（I·r）'],
+  'properties.internalEmf': ['EMF', '电动势'],
   'compare.empty': ['Change a parameter to compare before and after.', '改变参数以查看前后对比。'],
   'direction.increase': ['Increase', '增大'],
   'direction.decrease': ['Decrease', '减小'],
@@ -164,6 +174,17 @@ const D: Record<string, Entry> = {
   'toast.loaded': ['Circuit loaded', '电路已载入'],
   'toast.shared': ['Share link copied', '分享链接已复制'],
   'toast.noChanges': ['Nothing to save yet', '暂无可保存的内容'],
+  'toast.alreadyConnected': ['These terminals are already connected.', '这两个接线端已经连通。'],
+  'toast.selfWire': ['A terminal cannot be connected to itself.', '接线端不能与自身相连。'],
+  'toast.savedNotFound': ['Saved circuit not found', '未找到已保存的电路'],
+  'toast.saveError': ['Could not save this circuit', '无法保存该电路'],
+  'toast.loadError': ['Could not load that circuit', '无法载入该电路'],
+  'toast.deleteError': ['Could not delete that circuit', '无法删除该电路'],
+  'toast.exportUnavailable': ['Export is not available on this platform', '当前平台不支持导出'],
+  'toast.shareUnavailable': ['Sharing is not available', '当前平台不支持分享'],
+  'toast.solveFirst': ['The circuit must be solved before recording a point', '记录数据点前电路必须可求解'],
+  'toast.pointRecorded': ['Point recorded', '已记录数据点'],
+  'toast.sharedNative': ['Shared', '已分享'],
   'toast.unsupported': ['Not supported on this platform', '当前平台不支持该操作'],
   'save.title': ['Saved circuits', '已保存电路'],
   'save.empty': ['No saved circuits yet.', '尚未保存任何电路。'],
@@ -231,6 +252,56 @@ const COMPONENT_NAMES: Record<ComponentKind, Entry> = {
   capacitor: ['Capacitor', '电容器'],
   diode: ['Diode', '二极管'],
 };
+
+const COMPONENT_DESCRIPTIONS: Record<ComponentKind, Entry> = {
+  cell: [
+    'Ideal chemical source with an adjustable internal resistance.',
+    '理想化学电源，内阻可调。',
+  ],
+  battery: [
+    'Multi-cell source. EMF and internal resistance are adjustable.',
+    '多节电池组，电动势与内阻可调。',
+  ],
+  resistor: [
+    'Fixed resistor. Current and voltage obey Ohm’s law.',
+    '定值电阻，电流与电压遵循欧姆定律。',
+  ],
+  'variable-resistor': [
+    'Rheostat used to control current or act as a potential divider.',
+    '滑动变阻器，用于控制电流或构成分压电路。',
+  ],
+  lamp: [
+    'Non-ohmic lamp: resistance rises as the filament heats up.',
+    '非欧姆灯泡：灯丝温度升高时电阻增大。',
+  ],
+  switch: ['Opens or closes a branch of the circuit.', '接通或断开某条支路。'],
+  ammeter: [
+    'Ideal ammeter: negligible resistance, connected in series.',
+    '理想电流表：内阻可忽略，串联接入。',
+  ],
+  voltmeter: [
+    'Ideal voltmeter: effectively infinite resistance, connected in parallel.',
+    '理想电压表：内阻近似无穷大，并联接入。',
+  ],
+  ldr: [
+    'Light-dependent resistor: resistance falls as light intensity rises.',
+    '光敏电阻：光照增强时电阻减小。',
+  ],
+  thermistor: [
+    'Negative temperature coefficient thermistor: resistance falls as it warms.',
+    '负温度系数热敏电阻：温度升高时电阻减小。',
+  ],
+  capacitor: ['Stores charge. Blocks steady direct current.', '储存电荷，阻碍恒定直流。'],
+  diode: ['Semiconductor diode: conducts in forward bias only.', '半导体二极管：仅在正向偏置时导通。'],
+};
+
+export function componentDescription(lang: Language, kind: ComponentKind): string {
+  const entry = COMPONENT_DESCRIPTIONS[kind];
+  if (!entry) return '';
+  if (lang === 'zh') return entry[1];
+  if (lang === 'bilingual') return `${entry[0]} / ${entry[1]}`;
+  return entry[0];
+}
 
 export function componentName(lang: Language, kind: ComponentKind): string {
   const entry = COMPONENT_NAMES[kind];

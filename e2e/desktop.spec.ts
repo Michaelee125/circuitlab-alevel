@@ -24,6 +24,19 @@ async function setRange(page: Page, locator: ReturnType<Page['locator']>, value:
   );
 }
 
+async function canvasPoint(page: Page, worldX: number, worldY: number) {
+  const view = await state(page).evaluate((el) => ({
+    x: Number(el.getAttribute('data-view-x')),
+    y: Number(el.getAttribute('data-view-y')),
+    zoom: Number(el.getAttribute('data-zoom')),
+  }));
+  const box = await page.locator('.canvas-host').first().boundingBox();
+  return {
+    x: (box?.x ?? 0) + view.x + worldX * view.zoom,
+    y: (box?.y ?? 0) + view.y + worldY * view.zoom,
+  };
+}
+
 test.describe('CircuitLab desktop', () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) < 900, 'desktop layout only');
 
@@ -157,6 +170,56 @@ test.describe('CircuitLab desktop', () => {
       dock.getByRole('button', { name: 'Export CSV' }).click(),
     ]);
     expect(download.suggestedFilename()).toBe('circuitlab-data.csv');
+  });
+
+  test('offers English, Chinese and bilingual options that switch live', async ({ page }) => {
+    for (const label of ['EN', '中文', 'EN/中']) {
+      await expect(page.getByRole('tab', { name: label, exact: true })).toBeVisible();
+    }
+    await page.getByRole('tab', { name: 'EN/中' }).click();
+    await expect(state(page)).toHaveAttribute('data-language', 'bilingual');
+    await expect(page.locator('.rail-tab').first()).toContainText(' · ');
+    await page.getByRole('tab', { name: 'EN', exact: true }).click();
+    await expect(state(page)).toHaveAttribute('data-language', 'en');
+  });
+
+  test('pins the explanation panel so it stays visible', async ({ page }) => {
+    await loadExperiment(page, 'LDR circuit');
+    await page.getByRole('button', { name: /Increase light/i }).first().click();
+    await page.getByRole('button', { name: 'Keep explanation visible' }).click();
+    const pane = page.locator('.rail-pane-explain');
+    await expect(pane).toBeVisible();
+    await expect(pane.getByText('LDR in series with a fixed resistor')).toBeVisible();
+    await pane.getByRole('button', { name: 'Stop keeping explanation visible' }).click();
+    await expect(page.locator('.rail-pane-explain')).toHaveCount(0);
+  });
+
+  test('models internal resistance visually and numerically', async ({ page }) => {
+    await loadExperiment(page, 'Internal resistance');
+    const point = await canvasPoint(page, 140, 260);
+    await page.mouse.click(point.x, point.y);
+    await expect(page.getByText('Lost volts (I·r)').first()).toBeVisible();
+    await expect(page.getByText('0.50 Ω').first()).toBeVisible();
+    await page.getByRole('tab', { name: 'Realistic' }).click();
+    await expect(state(page)).toHaveAttribute('data-view-mode', 'realistic');
+    await expect(page.getByText('5.00 V').first()).toBeVisible();
+  });
+
+  test('rejects redundant wires and lets a wire be selected and deleted', async ({ page }) => {
+    await loadExperiment(page, 'LDR circuit');
+    await expect(state(page)).toHaveAttribute('data-wires', '6');
+    // LDR1.a and E1.pos are already connected, so a second wire must be refused.
+    const ldrA = await canvasPoint(page, 348, 260);
+    const cellPos = await canvasPoint(page, 192, 260);
+    await page.mouse.click(ldrA.x, ldrA.y);
+    await page.mouse.click(cellPos.x, cellPos.y);
+    await expect(page.getByText('These terminals are already connected.')).toBeVisible();
+    await expect(state(page)).toHaveAttribute('data-wires', '6');
+    // Click the existing wire between them and delete it.
+    const onWire = await canvasPoint(page, 270, 260);
+    await page.mouse.click(onWire.x, onWire.y);
+    await page.keyboard.press('Delete');
+    await expect(state(page)).toHaveAttribute('data-wires', '5');
   });
 
   test('shows the internal-resistance fit and the RC time constant', async ({ page }) => {

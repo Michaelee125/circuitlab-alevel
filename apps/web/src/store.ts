@@ -3,12 +3,15 @@ import { create } from 'zustand';
 import {
   addComponent,
   autoLayout,
+  buildTopology,
   connectTerminals as connectCore,
   createComponent,
   createDocument,
   documentBounds,
   moveComponent,
+  pinKey,
   removeComponent,
+  removeWire as removeWireCore,
   rotateComponent,
   updateParams as applyParams,
 } from '@circuitlab/circuit-core';
@@ -29,6 +32,7 @@ import type { ExplainResult } from '@circuitlab/reasoning-engine';
 import { buildGuidedQuestions, getExperiment } from '@circuitlab/teaching-engine';
 import type { GuidedQuestion } from '@circuitlab/teaching-engine';
 import { getAdapters } from '@circuitlab/platform-adapters';
+import { t } from '@circuitlab/i18n';
 import type { StoredCircuit } from '@circuitlab/platform-adapters';
 import { parseCircuitJSON, serializeCircuit } from '@circuitlab/circuit-core';
 
@@ -68,6 +72,15 @@ interface Prefs {
 }
 
 const PREF_KEY = 'circuitlab.prefs.v1';
+const PIN_KEY = 'circuitlab.explainPinned.v1';
+
+function loadPinned(): boolean {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(PIN_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 
 function loadPrefs(): Prefs {
   const fallback: Prefs = { language: 'en', theme: 'dark', viewMode: 'schematic', quality: 'high' };
@@ -110,6 +123,7 @@ interface CircuitState {
   refDoc: CircuitDocument | null;
   lastChangeKey: string | null;
   selectionId: string | null;
+  selectedWireId: string | null;
   wiringFrom: { componentId: string; terminalId: string } | null;
   hoverTerminal: { componentId: string; terminalId: string } | null;
   view: ViewportState;
@@ -125,6 +139,7 @@ interface CircuitState {
   bottomOpen: boolean;
   mobileSheet: SheetKind;
   showGrid: boolean;
+  explainPinned: boolean;
   highlightIds: string[];
   transientInitialVoltage: number;
   recorded: RecordedPoint[];
@@ -140,6 +155,7 @@ interface CircuitState {
   deleteSelected: () => void;
   rotateSelected: () => void;
   select: (id: string | null) => void;
+  selectWire: (id: string | null) => void;
   setWiringFrom: (endpoint: { componentId: string; terminalId: string } | null) => void;
   setHoverTerminal: (endpoint: { componentId: string; terminalId: string } | null) => void;
   connect: (a: { componentId: string; terminalId: string }, b: { componentId: string; terminalId: string }) => void;
@@ -169,6 +185,7 @@ interface CircuitState {
   setBottomOpen: (open: boolean) => void;
   setSheet: (sheet: SheetKind) => void;
   setShowGrid: (show: boolean) => void;
+  toggleExplainPinned: () => void;
   setHighlight: (ids: string[]) => void;
 
   loadDocument: (doc: CircuitDocument, experimentId?: string | null) => void;
@@ -201,6 +218,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   refDoc: null,
   lastChangeKey: null,
   selectionId: null,
+  selectedWireId: null,
   wiringFrom: null,
   hoverTerminal: null,
   view: { x: 80, y: 80, zoom: 1 },
@@ -216,6 +234,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   bottomOpen: false,
   mobileSheet: 'none',
   showGrid: true,
+  explainPinned: loadPinned(),
   highlightIds: [],
   transientInitialVoltage: 0,
   recorded: [],
@@ -305,12 +324,25 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
 
   deleteSelected: () => {
     const state = get();
+    if (state.selectedWireId) {
+      set({
+        doc: removeWireCore(state.doc, state.selectedWireId),
+        past: [...state.past, state.doc].slice(-60),
+        future: [],
+        selectedWireId: null,
+        refDoc: null,
+        lastChangeKey: null,
+        highlightIds: [],
+      });
+      return;
+    }
     if (!state.selectionId) return;
     set({
       doc: removeComponent(state.doc, state.selectionId),
       past: [...state.past, state.doc].slice(-60),
       future: [],
       selectionId: null,
+      selectedWireId: null,
       wiringFrom: null,
       refDoc: null,
       lastChangeKey: null,
@@ -332,9 +364,18 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   select: (id) =>
     set((state) => ({
       selectionId: id,
+      selectedWireId: null,
       wiringFrom: state.wiringFrom && state.wiringFrom.componentId !== id ? state.wiringFrom : state.wiringFrom,
       highlightIds: [],
     })),
+
+  selectWire: (id) =>
+    set({
+      selectedWireId: id,
+      selectionId: null,
+      wiringFrom: null,
+      highlightIds: [],
+    }),
 
   setWiringFrom: (endpoint) => set({ wiringFrom: endpoint }),
 
@@ -342,9 +383,24 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
 
   connect: (a, b) => {
     const state = get();
+    // Reject redundant wires between pins that are already on the same node:
+    // they would render directly on top of existing wires.
+    const topology = buildTopology(state.doc);
+    const nodeA = topology.nodeOfPin[pinKey(a.componentId, a.terminalId)];
+    const nodeB = topology.nodeOfPin[pinKey(b.componentId, b.terminalId)];
+    if (nodeA && nodeB && nodeA === nodeB) {
+      get().toastMessage(t(get().language, 'toast.alreadyConnected'), 'error');
+      set({ wiringFrom: null });
+      return;
+    }
     const result = connectCore(state.doc, a, b);
     if (result.error) {
-      get().toastMessage(result.error, 'error');
+      const message = result.error.includes('already connected')
+        ? t(get().language, 'toast.alreadyConnected')
+        : result.error.includes('itself')
+          ? t(get().language, 'toast.selfWire')
+          : result.error;
+      get().toastMessage(message, 'error');
       set({ wiringFrom: null });
       return;
     }
@@ -536,6 +592,17 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   setBottomOpen: (bottomOpen) => set({ bottomOpen }),
   setSheet: (mobileSheet) => set({ mobileSheet }),
   setShowGrid: (showGrid) => set({ showGrid }),
+
+  toggleExplainPinned: () =>
+    set((state) => {
+      const next = !state.explainPinned;
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(PIN_KEY, String(next));
+      } catch {
+        // preference persistence is best-effort
+      }
+      return { explainPinned: next };
+    }),
   setHighlight: (highlightIds) => set({ highlightIds }),
 
   loadDocument: (doc, experimentId = null) =>
@@ -546,6 +613,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       refDoc: null,
       lastChangeKey: null,
       selectionId: null,
+      selectedWireId: null,
       wiringFrom: null,
       hoverTerminal: null,
       highlightIds: [],
@@ -567,7 +635,11 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       rightTab: 'inspector',
     });
     get().zoomToFitSoon();
-    get().toastMessage(`Loaded: ${experiment.title.en}`);
+    get().toastMessage(
+      `${t(get().language, 'toast.loaded')}: ${
+        get().language === 'zh' ? experiment.title.zh : experiment.title.en
+      }`,
+    );
   },
 
   applyExperimentAction: (actionId) => {
@@ -605,9 +677,9 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     try {
       await getAdapters().storage.save(get().doc);
       await get().refreshSaved();
-      get().toastMessage('Circuit saved locally');
+      get().toastMessage(t(get().language, 'toast.saved'));
     } catch {
-      get().toastMessage('Could not save this circuit', 'error');
+      get().toastMessage(t(get().language, 'toast.saveError'), 'error');
     }
   },
 
@@ -615,15 +687,15 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     try {
       const doc = await getAdapters().storage.load(id);
       if (!doc) {
-        get().toastMessage('Saved circuit not found', 'error');
+        get().toastMessage(t(get().language, 'toast.savedNotFound'), 'error');
         return;
       }
       get().loadDocument(doc);
       get().fitView();
       set({ mobileSheet: 'none' });
-      get().toastMessage('Circuit loaded');
+      get().toastMessage(t(get().language, 'toast.loaded'));
     } catch {
-      get().toastMessage('Could not load that circuit', 'error');
+      get().toastMessage(t(get().language, 'toast.loadError'), 'error');
     }
   },
 
@@ -632,7 +704,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       await getAdapters().storage.remove(id);
       await get().refreshSaved();
     } catch {
-      get().toastMessage('Could not delete that circuit', 'error');
+      get().toastMessage(t(get().language, 'toast.deleteError'), 'error');
     }
   },
 
@@ -644,7 +716,10 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       serializeCircuit(doc),
       'application/json',
     );
-    get().toastMessage(ok ? 'Circuit exported' : 'Export is not available on this platform', ok ? 'ok' : 'error');
+    get().toastMessage(
+      ok ? t(get().language, 'toast.exported') : t(get().language, 'toast.exportUnavailable'),
+      ok ? 'ok' : 'error',
+    );
   },
 
   importCircuit: async () => {
@@ -652,12 +727,12 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     if (!raw) return;
     const result = parseCircuitJSON(raw);
     if (!result.ok || !result.doc) {
-      get().toastMessage(result.errors[0] ?? 'Could not import that file', 'error');
+      get().toastMessage(result.errors[0] ?? t(get().language, 'toast.importError'), 'error');
       return;
     }
     get().loadDocument(result.doc);
     get().fitView();
-    get().toastMessage(`Imported: ${result.doc.name}`);
+    get().toastMessage(`${t(get().language, 'toast.imported')}: ${result.doc.name}`);
   },
 
   shareCurrent: async () => {
@@ -667,7 +742,11 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       url: typeof location !== 'undefined' ? location.href : undefined,
     });
     get().toastMessage(
-      result === 'copied' ? 'Link copied to clipboard' : result === 'shared' ? 'Shared' : 'Sharing is not available',
+      result === 'copied'
+        ? t(get().language, 'toast.shared')
+        : result === 'shared'
+          ? t(get().language, 'toast.sharedNative')
+          : t(get().language, 'toast.shareUnavailable'),
       result === 'unsupported' ? 'error' : 'ok',
     );
   },
@@ -677,7 +756,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     const solution = solveCircuit(state.doc);
     const source = state.doc.components.find((c) => c.kind === 'cell' || c.kind === 'battery');
     if (!solution.ok || !source) {
-      get().toastMessage('The circuit must be solved before recording a point', 'error');
+      get().toastMessage(t(get().language, 'toast.solveFirst'), 'error');
       return;
     }
     const reading = solution.components[source.id];
@@ -693,7 +772,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
         },
       ],
     });
-    get().toastMessage('Point recorded');
+    get().toastMessage(t(get().language, 'toast.pointRecorded'));
   },
 
   clearRecorded: () => set({ recorded: [] }),

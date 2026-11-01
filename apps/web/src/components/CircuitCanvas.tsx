@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { componentAt, getDesignators, terminalAt } from '@circuitlab/circuit-core';
+import { componentAt, getDesignators, terminalAt, wireAt } from '@circuitlab/circuit-core';
 import type { Point } from '@circuitlab/circuit-core';
 import { CircuitRenderer } from '@circuitlab/circuit-renderer';
 import { Button, IconButton, Segmented } from '@circuitlab/ui';
@@ -32,6 +32,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
   const quality = useCircuitStore((s) => s.quality);
   const language = useCircuitStore((s) => s.language);
   const selectionId = useCircuitStore((s) => s.selectionId);
+  const selectedWireId = useCircuitStore((s) => s.selectedWireId);
   const wiringFrom = useCircuitStore((s) => s.wiringFrom);
   const highlightIds = useCircuitStore((s) => s.highlightIds);
   const showGrid = useCircuitStore((s) => s.showGrid);
@@ -91,13 +92,14 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       theme,
       quality,
       selectedId: selectionId,
+      selectedWireId,
       wiringFrom,
       highlightIds,
       showGrid,
       labels,
       reduceMotion: getReducedMotion(),
     });
-  }, [ready, doc, solution, viewMode, theme, quality, selectionId, wiringFrom, highlightIds, showGrid, labels]);
+  }, [ready, doc, solution, viewMode, theme, quality, selectionId, selectedWireId, wiringFrom, highlightIds, showGrid, labels]);
 
   useEffect(() => {
     rendererRef.current?.setView(view);
@@ -182,7 +184,13 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       state.setWiringFrom(null);
       return;
     }
+    const wire = wireAt(doc, world, 12);
+    if (wire) {
+      state.selectWire(wire.id);
+      return;
+    }
     state.select(null);
+    state.selectWire(null);
     panRef.current = { start: local, view: { x: view.x, y: view.y } };
   };
 
@@ -296,7 +304,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
         return;
       }
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        if (state.selectionId) {
+        if (state.selectionId || state.selectedWireId) {
           event.preventDefault();
           state.deleteSelected();
         }
@@ -389,7 +397,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
             label={t(language, 'action.delete')}
             tone="danger"
             onClick={() => useCircuitStore.getState().deleteSelected()}
-            disabled={!selectionId}
+            disabled={!selectionId && !selectedWireId}
           />
           {!compact && (
             <IconButton

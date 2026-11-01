@@ -25,6 +25,7 @@ export interface RenderState {
   theme: ThemeMode;
   quality: QualityLevel;
   selectedId?: string | null;
+  selectedWireId?: string | null;
   wiringFrom?: { componentId: string; terminalId: string } | null;
   hoverTerminal?: { componentId: string; terminalId: string } | null;
   highlightIds?: string[];
@@ -217,16 +218,27 @@ export class CircuitRenderer {
     for (const wire of doc.wires) {
       const points = wirePolyline(doc, wire);
       if (points.length < 2) continue;
+      const selected = wire.id === this.state.selectedWireId;
       const trace = () => {
         this.wires.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i += 1) this.wires.lineTo(points[i].x, points[i].y);
       };
+      if (selected) {
+        trace();
+        this.wires.stroke({ width: 16, color: this.palette.select, alpha: 0.2, cap: 'round', join: 'round' });
+      }
       trace();
       this.wires.stroke({ width: 9, color: this.palette.wireGlow, alpha: 0.16, cap: 'round', join: 'round' });
       trace();
       this.wires.stroke({ width: 4.6, color: this.palette.background, alpha: 0.85, cap: 'round', join: 'round' });
       trace();
-      this.wires.stroke({ width: 2.4, color: this.palette.wire, alpha: 0.95, cap: 'round', join: 'round' });
+      this.wires.stroke({
+        width: selected ? 3.4 : 2.4,
+        color: selected ? this.palette.select : this.palette.wire,
+        alpha: 0.98,
+        cap: 'round',
+        join: 'round',
+      });
       // junction dots at both ends
       for (const point of [points[0], points[points.length - 1]]) {
         this.wires.circle(point.x, point.y, 3.1).fill({ color: this.palette.wire });
@@ -256,6 +268,20 @@ export class CircuitRenderer {
         drawSchematicBody(g, comp, this.palette);
       }
       container.addChild(g);
+
+      if (
+        (comp.kind === 'cell' || comp.kind === 'battery') &&
+        (comp.params.internalResistance ?? 0) > 0
+      ) {
+        const r = comp.params.internalResistance ?? 0;
+        const annotation = new Text({
+          text: `r = ${r < 1 ? r.toFixed(2) : r.toFixed(1)} Ω`,
+          style: { fontFamily: MONO, fontSize: 8.5, fontWeight: '600', fill: this.palette.highlight },
+        });
+        annotation.anchor.set(0.5);
+        annotation.position.set(0, -36);
+        container.addChild(annotation);
+      }
 
       if (comp.kind === 'ammeter' || comp.kind === 'voltmeter') {
         const value = reading

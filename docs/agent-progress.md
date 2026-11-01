@@ -1,6 +1,6 @@
 # Agent progress
 
-Last updated: 2026-11-01 (Phase 1 build)
+Last updated: 2026-11-01 (Phase 1 build + review fixes)
 
 ## Status
 
@@ -18,13 +18,20 @@ Last updated: 2026-11-01 (Phase 1 build)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching tests: **47 passed**
-- Desktop e2e: **11 passed** (`desktop-chromium`, includes the smoke test)
+- Unit/physics/reasoning/teaching/routing tests: **52 passed**
+- Desktop e2e: **15 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **32 passed**, 18 intentionally skipped
+- Total Playwright: **36 passed**, 48 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
+
+## Review fixes (after first live delivery)
+
+- Language switching is always reachable: three explicit options (EN / 中文 / EN/中) on desktop and a native select on phones; chart axes, component descriptions, meter notes and toast messages were localized too.
+- The Explain panel can be pinned so it stays visible under Properties (disabled in Exam mode so answers stay hidden).
+- Cells and batteries with `r > 0` now draw an internal resistor and an `r = … Ω` annotation in both visual modes, with terminal p.d. / lost-volts cards in the inspector.
+- Wire logic: connections between pins that are already on the same node are refused with a localized message; overlapping routes are pushed into parallel lanes; wires can be selected and deleted.
 
 ## Known limitations
 

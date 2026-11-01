@@ -18,6 +18,10 @@ circuit — not from keyword matching.
 
 ![CircuitLab LDR experiment](docs/images/explain-desktop.png)
 
+| Pinned explanation + internal resistance | 中文界面 |
+| --- | --- |
+| ![Pinned explain panel with internal resistance](docs/images/pinned-internal-resistance.png) | ![Chinese interface](docs/images/chinese-ui.png) |
+
 ## Why this is not just an animation
 
 The core of the product is a physics reasoning engine:
@@ -48,6 +52,10 @@ stays at the supply voltage and only the LDR branch current changes.
 | Non-linear lamp and diode models, RC analytic transients | ✅ |
 | Physics reasoning engine (English + Chinese, marking points, exam-style answer) | ✅ |
 | Explore / Guided / Exam modes, before/after Compare | ✅ |
+| English / 中文 / Bilingual switching, always visible in the top bar | ✅ |
+| Pinnable Explain panel that stays visible while you edit | ✅ |
+| Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
+| Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
 | 11 runnable experiments (the 10 required templates + the LDR parallel case) | ✅ |
 | Charts: I–V, V–I with linear fit, V–t / I–t, CSV export | ✅ |
 | Save/load (IndexedDB), JSON import/export, share link | ✅ |

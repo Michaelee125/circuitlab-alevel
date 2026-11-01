@@ -33,6 +33,12 @@ site.
 | Increase light action | ✅ total resistance 12 Ω → 6 Ω |
 | Explain panel | ✅ “LDR in series with a fixed resistor”, chain contains 8.00 Ω → 2.00 Ω |
 | Realistic mode | ✅ renders, same circuit and resistance |
+| Three language options always visible | ✅ EN / 中文 / EN/中 |
+| Bilingual mode | ✅ tab labels show both languages |
+| Pinned explanation | ✅ stays visible below Properties |
+| Internal resistance | ✅ r annotation in circuit, “Lost volts” card, localized |
+| Redundant wire attempt | ✅ “These terminals are already connected.”, wire count unchanged |
+| Wire selection + delete | ✅ selected corridor highlighted, Delete removes it |
 | Console errors | 0 |
 | Failed network requests | 0 |
 
@@ -49,12 +55,12 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching) | 47 / 47 passed |
-| Playwright desktop project | 11 / 11 passed |
+| Vitest (physics, transients, reasoning, teaching, routing) | 52 / 52 passed |
+| Playwright desktop project | 15 / 15 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 32 passed, 18 intentionally skipped (viewport-specific) |
+| Total e2e | 36 passed, 48 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

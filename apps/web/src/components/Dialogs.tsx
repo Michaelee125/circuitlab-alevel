@@ -22,7 +22,7 @@ export function ExperimentLibraryContent({ onDone }: { onDone?: () => void }) {
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-        <Badge tone="accent">{EXPERIMENTS.length} experiments</Badge>
+        <Badge tone="accent">{t(language, "experiments.count", { n: EXPERIMENTS.length })}</Badge>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
           {language === 'zh'
             ? '每个实验都可运行，并由同一物理引擎求解。'
@@ -178,6 +178,7 @@ export function HelpContent() {
   const theme = useCircuitStore((s) => s.theme);
   const quality = useCircuitStore((s) => s.quality);
   const setQuality = useCircuitStore((s) => s.setQuality);
+  const setTheme = useCircuitStore((s) => s.setTheme);
   const showGrid = useCircuitStore((s) => s.showGrid);
   const setShowGrid = useCircuitStore((s) => s.setShowGrid);
 
@@ -210,7 +211,13 @@ export function HelpContent() {
         >
           {t(language, 'canvas.grid')}
         </button>
-        <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{theme === 'dark' ? t(language, 'view.dark') : t(language, 'view.light')}</span>
+        <button
+          className="btn btn-subtle btn-sm"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        >
+          <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={13} />
+          {theme === 'dark' ? t(language, 'view.dark') : t(language, 'view.light')}
+        </button>
       </div>
       <div className="section-label">About</div>
       <p style={{ margin: 0, fontSize: 11.5, color: 'var(--muted)' }}>

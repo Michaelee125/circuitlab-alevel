@@ -102,20 +102,35 @@ export function drawSchematicBody(g: Graphics, comp: ComponentInstance, palette:
       line(g, [[-11, -11], [11, 11]], stroke, 2);
       line(g, [[11, -11], [-11, 11]], stroke, 2);
       break;
-    case 'cell':
+    case 'cell': {
+      const internalR = comp.params.internalResistance ?? 0;
       lead(g, -52, -9, palette, 2);
-      lead(g, 9, 52, palette, 2);
+      lead(g, internalR > 0 ? 9 : 9, internalR > 0 ? 31 : 52, palette, 2);
+      lead(g, 49, 52, palette, 2);
       line(g, [[-9, -9], [-9, 9]], stroke, 2.4);
       line(g, [[9, -16], [9, 16]], stroke, 2.4);
+      if (internalR > 0) {
+        // internal resistance shown in series with the EMF, inside the cell lead
+        g.roundRect(31, -6, 18, 12, 2).fill({ color: palette.body, alpha: 0.96 }).stroke({ width: 1.5, color: palette.highlight });
+        line(g, [[34, 0], [37, -3], [40, 3], [43, -3], [46, 3]], palette.highlight, 1.3);
+      }
       break;
-    case 'battery':
+    }
+    case 'battery': {
+      const internalR = comp.params.internalResistance ?? 0;
       lead(g, -52, -21, palette, 2);
-      lead(g, 21, 52, palette, 2);
+      lead(g, 21, internalR > 0 ? 31 : 52, palette, 2);
+      lead(g, 49, 52, palette, 2);
       line(g, [[-21, -9], [-21, 9]], stroke, 2.2);
       line(g, [[-11, -16], [-11, 16]], stroke, 2.2);
       line(g, [[1, -9], [1, 9]], stroke, 2.2);
       line(g, [[11, -16], [11, 16]], stroke, 2.2);
+      if (internalR > 0) {
+        g.roundRect(31, -6, 18, 12, 2).fill({ color: palette.body, alpha: 0.96 }).stroke({ width: 1.5, color: palette.highlight });
+        line(g, [[34, 0], [37, -3], [40, 3], [43, -3], [46, 3]], palette.highlight, 1.3);
+      }
       break;
+    }
     case 'switch': {
       lead(g, -52, -24, palette, 2);
       lead(g, 24, 52, palette, 2);
@@ -246,6 +261,13 @@ export function drawRealisticBody(
       rect(g, 24, -26, 12, 8, 2, palette.copper, 1);
       rect(g, 28, -30, 5, 6, 1.5, palette.metal, 1);
       g.rect(-38, 4, 76, 2).fill({ color: palette.metalDark, alpha: 0.5 });
+      if ((comp.params.internalResistance ?? 0) > 0) {
+        // A small ceramic resistor in series with the EMF, tucked between the
+        // cell body and its positive terminal.
+        g.roundRect(39, -6, 12, 12, 3).fill({ color: palette.ceramic, alpha: 1 }).stroke({ width: 1.1, color: palette.ceramicDark });
+        g.rect(43, -6, 3.4, 12).fill({ color: 0x7a3b1e, alpha: 0.95 });
+        g.rect(47, -6, 2.6, 12).fill({ color: 0x1a1a1a, alpha: 0.95 });
+      }
       break;
     }
     case 'battery': {

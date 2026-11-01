@@ -142,6 +142,8 @@ export function ChartView() {
 
   const option = useMemo(() => {
     if (!chartData) return null;
+    const label = (value: { en: string; zh: string }) =>
+      language === 'zh' ? value.zh : language === 'bilingual' ? `${value.en} / ${value.zh}` : value.en;
     return {
       backgroundColor: 'transparent',
       animationDuration: 300,
@@ -163,7 +165,7 @@ export function ChartView() {
       },
       xAxis: {
         type: 'value',
-        name: chartData.xLabel.en,
+        name: label(chartData.xLabel),
         nameLocation: 'middle',
         nameGap: 28,
         nameTextStyle: { color: colors.axis, fontSize: 10.5 },
@@ -174,7 +176,7 @@ export function ChartView() {
       },
       yAxis: {
         type: 'value',
-        name: chartData.yLabel.en,
+        name: label(chartData.yLabel),
         nameLocation: 'middle',
         nameGap: 44,
         nameTextStyle: { color: colors.axis, fontSize: 10.5 },
@@ -213,7 +215,7 @@ export function ChartView() {
           : undefined,
       })),
     };
-  }, [chartData, theme, colors, chartData?.series.length]);
+  }, [chartData, theme, colors, language, chartData?.series.length]);
 
   useEffect(() => {
     if (!lib || !option || !containerRef.current) return;

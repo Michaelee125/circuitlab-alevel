@@ -41,7 +41,8 @@ export type IconName =
   | 'circuit'
   | 'target'
   | 'globe'
-  | 'spark';
+  | 'spark'
+  | 'pin';
 
 const ICONS: Record<IconName, string[]> = {
   plus: ['M12 5v14', 'M5 12h14'],
@@ -80,6 +81,7 @@ const ICONS: Record<IconName, string[]> = {
   target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
   globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z'],
   spark: ['M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9L12 3z'],
+  pin: ['M9 3h6', 'M10 3l-1 6-4 4h14l-4-4-1-6', 'M12 13v8'],
 };
 
 export interface IconProps {

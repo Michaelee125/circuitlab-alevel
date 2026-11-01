@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getComponentDef, getDesignators } from '@circuitlab/circuit-core';
 import type { ComponentInstance, ComponentKind } from '@circuitlab/circuit-core';
-import { formatQuantity, formatWithUnit, componentName, t } from '@circuitlab/i18n';
+import { formatQuantity, formatWithUnit, componentDescription, componentName, t } from '@circuitlab/i18n';
 import {
   Badge,
   Button,
@@ -211,9 +211,7 @@ function ParamEditor({ comp }: { comp: ComponentInstance }) {
       return (
         <div className="notice notice-info">
           <Icon name="info" size={14} />
-          <span>
-            {comp.kind === 'ammeter' ? 'Ideal ammeter: R ≈ 0 Ω, in series.' : 'Ideal voltmeter: R ≈ ∞, in parallel.'}
-          </span>
+          <span>{t(language, comp.kind === 'ammeter' ? 'properties.idealAmmeter' : 'properties.idealVoltmeter')}</span>
         </div>
       );
     default:
@@ -307,6 +305,9 @@ export function Inspector() {
   const reading = solution.components[comp.id];
   const def = getComponentDef(comp.kind);
   const derived = reading?.resistance;
+  const internalR = comp.params.internalResistance ?? 0;
+  const isSource = comp.kind === 'cell' || comp.kind === 'battery';
+  const showInternal = isSource && internalR > 0;
 
   return (
     <>
@@ -315,7 +316,9 @@ export function Inspector() {
           <div className="explain-title">
             {labels[comp.id]} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {componentName(language, comp.kind)}</span>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>{def.description}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>
+            {componentDescription(language, comp.kind)}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           <IconButton icon="rotate" label={t(language, 'action.rotate')} onClick={rotateSelected} size={15} />
@@ -326,7 +329,43 @@ export function Inspector() {
 
       <ParamEditor comp={comp} />
 
-      {reading && reading.valid && comp.kind !== 'ammeter' && comp.kind !== 'voltmeter' && (
+      {reading && showInternal && (
+        <>
+          <div className="section-label">{t(language, 'properties.internalResistance')}</div>
+          <div className="meter-cards">
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.internalEmf')}</div>
+              <div className="meter-card-value">{formatQuantity(comp.params.emf ?? 0, 'voltage')}</div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.terminalPd')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(Math.abs(reading.terminalVoltage ?? 0), 'voltage')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.lostVolts')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(reading.currentMagnitude * internalR, 'voltage')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'measure.current')}</div>
+              <div className="meter-card-value">{formatQuantity(reading.currentMagnitude, 'current')}</div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'measure.power')}</div>
+              <div className="meter-card-value">{formatQuantity(Math.abs(reading.power), 'power')}</div>
+            </div>
+          </div>
+          <div className="field-hint">
+            Terminal p.d. = EMF − I·r = {formatQuantity(comp.params.emf ?? 0, 'voltage')} −{' '}
+            {formatQuantity(reading.currentMagnitude, 'current')} ×{' '}
+            {formatQuantity(internalR, 'resistance')}
+          </div>
+        </>
+      )}
+      {reading && reading.valid && comp.kind !== 'ammeter' && comp.kind !== 'voltmeter' && !showInternal && (
         <>
           <div className="section-label">{t(language, 'panel.measure')}</div>
           <div className="meter-cards">
@@ -834,8 +873,14 @@ export function RightRail() {
   const mode = useCircuitStore((s) => s.mode);
   const rightTab = useCircuitStore((s) => s.rightTab);
   const setRightTab = useCircuitStore((s) => s.setRightTab);
+  const pinnedPreference = useCircuitStore((s) => s.explainPinned);
+  const toggleExplainPinned = useCircuitStore((s) => s.toggleExplainPinned);
 
-  const tabs: { id: RightTab; label: string; icon: 'sliders' | 'zap' | 'layers' | 'help' | 'book' }[] =
+  // In exam mode the explanation must stay hidden, so pinning is disabled there.
+  const canPin = mode !== 'exam';
+  const pinned = pinnedPreference && canPin;
+
+  const allTabs: { id: RightTab; label: string; icon: 'sliders' | 'zap' | 'layers' | 'help' | 'book' }[] =
     mode === 'guided'
       ? [
           { id: 'guided', label: t(language, 'mode.guided'), icon: 'help' },
@@ -853,7 +898,18 @@ export function RightRail() {
             { id: 'compare', label: t(language, 'panel.compare'), icon: 'layers' },
           ];
 
+  const tabs = pinned ? allTabs.filter((tab) => tab.id !== 'explain') : allTabs;
   const active = tabs.some((tab) => tab.id === rightTab) ? rightTab : tabs[0].id;
+
+  const tabContent = (
+    <>
+      {active === 'inspector' && <Inspector />}
+      {active === 'explain' && <ExplainPanel />}
+      {active === 'compare' && <ComparePanel />}
+      {active === 'guided' && <GuidedPanel />}
+      {active === 'exam' && <ExamPanel />}
+    </>
+  );
 
   return (
     <>
@@ -870,14 +926,50 @@ export function RightRail() {
             {tab.label}
           </button>
         ))}
+        <div style={{ flex: 1 }} />
+        {canPin && (
+          <IconButton
+            icon="pin"
+            size={14}
+            tone="ghost"
+            active={pinned}
+            aria-pressed={pinned}
+            label={t(language, pinned ? 'explain.unpin' : 'explain.pin')}
+            onClick={toggleExplainPinned}
+            className="pin-toggle"
+          />
+        )}
       </div>
-      <div className="rail-body">
-        {active === 'inspector' && <Inspector />}
-        {active === 'explain' && <ExplainPanel />}
-        {active === 'compare' && <ComparePanel />}
-        {active === 'guided' && <GuidedPanel />}
-        {active === 'exam' && <ExamPanel />}
-      </div>
+
+      {pinned ? (
+        <div className="rail-split">
+          <div className="rail-pane">
+            <div className="rail-body">{tabContent}</div>
+          </div>
+          <section className="rail-pane rail-pane-explain">
+            <div className="rail-pane-head">
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="zap" size={13} />
+                {t(language, 'explain.pinned')}
+              </span>
+              <IconButton
+                icon="pin"
+                size={13}
+                tone="ghost"
+                active
+                label={t(language, 'explain.unpin')}
+                onClick={toggleExplainPinned}
+              />
+            </div>
+            <div className="rail-body">
+              <ExplainPanel />
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="rail-body">{tabContent}</div>
+      )}
+
       <div style={{ padding: '9px 12px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: 0.3 }}>
           CircuitLab Physics · Phase 1
