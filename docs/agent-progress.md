@@ -10,7 +10,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | `circuit-core` (model, topology, geometry, validation, serialisation) | ✅ complete |
 | `physics-engine` (MNA, non-linear, transient, sweeps) | ✅ complete, 25 tests |
 | `reasoning-engine` (structural rules + verified chains, en/zh) | ✅ complete, 10 tests |
-| `teaching-engine` (11 experiments, guided, exam, dataset) | ✅ complete, 12 tests |
+| `teaching-engine` (11 experiments, guided, dataset) | ✅ complete, 8 tests |
 | `i18n`, `ui`, `platform-adapters` (web + WeChat) | ✅ complete |
 | `circuit-renderer` (schematic + realistic, particles, meters) | ✅ complete |
 | `apps/web` (editor, modes, panels, responsive, persistence) | ✅ complete |
@@ -18,10 +18,10 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **65 passed**
-- Desktop e2e: **18 passed** (`desktop-chromium`, includes the smoke test)
+- Unit/physics/reasoning/teaching/routing tests: **61 passed**
+- Desktop e2e: **17 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **39 passed**, 57 intentionally skipped
+- Total Playwright: **38 passed**, 54 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -29,7 +29,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 ## Review fixes (after first live delivery)
 
 - Language switching is always reachable: three explicit options (EN / 中文 / EN/中) on desktop and a native select on phones; chart axes, component descriptions, meter notes and toast messages were localized too.
-- The Explain panel can be pinned so it stays visible under Properties (disabled in Exam mode so answers stay hidden).
+- The Explain panel can be pinned so it stays visible under Properties.
 - Cells and batteries with `r > 0` now draw an internal resistor and an `r = … Ω` annotation in both visual modes, with terminal p.d. / lost-volts cards in the inspector.
 - Wire logic: connections between pins that are already on the same node are refused with a localized message; overlapping routes are pushed into parallel lanes; wires can be selected and deleted.
 
@@ -88,9 +88,14 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - The per-component V / I / R cards are now real DOM Liquid Glass instead of painted rectangles: the renderer keeps a pointer-transparent layer inside the canvas host, reuses one element per component, and updates positions on every pan/zoom. Each card uses `backdrop-filter: blur(20px) saturate(190%)` with a translucent gradient, hairline border, inner highlight and accent rail, so the circuit is visibly frosted behind the data. Leader lines are drawn from the card edge to the component so they never cross the glass.
 - Light and dark variants, compact phone cards, and the strict no-overlap placement are preserved. The values e2e test asserts three cards and a blurring backdrop filter.
 
+## Exam mode removed (tenth review)
+
+- Removed the Exam mode entirely: the mode switcher now offers Explore and Guided only, the exam panel and its question bank were deleted from the teaching engine, and the exam tab/sheet, marking UI, i18n strings and the exam-specific tests are gone.
+- The Explain panel still shows software-authored practice marking points and a model answer; the pin control is now always available.
+- Unit tests are 61 (the four exam-marking tests were removed), Playwright checks 38.
+
 ## Known limitations
 
-- Exam marking is software-authored keyword practice marking (English only).
 - RC transients support exactly one capacitor.
 - Ideal meters are modelled as 1 µΩ / 1 GΩ.
 - Reasoning rules cover LDR/thermistor series and parallel, fixed-resistor

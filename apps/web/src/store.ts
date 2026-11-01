@@ -36,7 +36,7 @@ import { t } from '@circuitlab/i18n';
 import type { StoredCircuit } from '@circuitlab/platform-adapters';
 import { parseCircuitJSON, serializeCircuit } from '@circuitlab/circuit-core';
 
-export type RightTab = 'inspector' | 'explain' | 'compare' | 'guided' | 'exam';
+export type RightTab = 'inspector' | 'explain' | 'compare' | 'guided';
 export type BottomTab = 'chart' | 'measure';
 export type SheetKind =
   | 'none'
@@ -47,7 +47,6 @@ export type SheetKind =
   | 'experiments'
   | 'chart'
   | 'guided'
-  | 'exam'
   | 'saved'
   | 'help';
 
@@ -598,7 +597,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       mode,
       highlightIds: [],
       mobileSheet: 'none',
-      rightTab: mode === 'guided' ? 'guided' : mode === 'exam' ? 'exam' : 'inspector',
+      rightTab: mode === 'guided' ? 'guided' : 'inspector',
     }),
   setRightTab: (rightTab) => set({ rightTab }),
   setBottomTab: (bottomTab) => set({ bottomTab }),
@@ -685,7 +684,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       refDoc: before,
       lastChangeKey: `action:${actionId}:${Date.now()}`,
       highlightIds: [],
-      rightTab: state.mode === 'guided' ? 'guided' : state.mode === 'exam' ? 'exam' : 'explain',
+      rightTab: state.mode === 'guided' ? 'guided' : 'explain',
       quizKey: state.quizKey + 1,
     });
   },

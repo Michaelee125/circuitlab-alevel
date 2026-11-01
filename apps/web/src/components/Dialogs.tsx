@@ -257,7 +257,7 @@ export function HelpContent() {
       <p style={{ margin: 0, fontSize: 11.5, color: 'var(--muted)' }}>
         CircuitLab Physics v0.1.0 · Phase 1 (web). Physics: Modified Nodal Analysis with Newton
         iteration for non-linear elements; RC transients use the analytic Thévenin solution.
-        Marking schemes in Exam mode are software-authored practice criteria, not official mark
+        Marking points in Explain are software-authored practice criteria, not official mark
         schemes. The same core packages power a WeChat mini-program adapter.
       </p>
     </div>

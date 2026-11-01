@@ -29,7 +29,7 @@ circuit-core  +  physics-engine  +  reasoning-engine  +  teaching-engine
 ```
 
 - Reuse: the shared `CircuitDocument`, MNA solver, reasoning rules, experiments,
-  guided/exam content.
+  guided content.
 - Work: a canvas renderer and a mini-program UI layer. The existing package
   boundaries make this a port, not a rewrite.
 - This is why `physics-engine` is DOM-free and `circuit-core` is framework-free.

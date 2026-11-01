@@ -141,4 +141,3 @@ All values are produced by the solver, not hard-coded into the UI.
 - `R_th` probing assumes linear elements around the operating point.
 - Internal-resistance reasoning is deliberately disabled for circuits with
   non-zero source resistance; the numbers remain available.
-- Exam marking is keyword-based practice marking, in English only.

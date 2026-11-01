@@ -100,9 +100,6 @@ never emits a chain it could not verify.
 - 11 experiments, each a pure document factory plus parameter actions.
 - Guided questions are derived from the verified chain: the correct option is
   the solved direction, so questions cannot contradict the explanation.
-- Exam questions carry keyword groups; all groups for a mark must appear in the
-  same sentence. This prevents a parallel-circuit answer from collecting a
-  series mark. Marking is explicitly software-authored.
 - The internal-resistance dataset is produced by re-solving the circuit for a
   range of rheostat values.
 

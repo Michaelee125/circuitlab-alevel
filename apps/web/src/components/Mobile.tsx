@@ -5,7 +5,7 @@ import { useCircuitStore } from '../store';
 import { CircuitCanvas } from './CircuitCanvas';
 import { MobileTopBar } from './TopBar';
 import { Palette } from './Palette';
-import { Inspector, ExplainPanel, ComparePanel, GuidedPanel, ExamPanel } from './RightRail';
+import { Inspector, ExplainPanel, ComparePanel, GuidedPanel } from './RightRail';
 import { ChartView, Measurements, ExperimentActions } from './BottomDock';
 
 const SHEET_TITLES: Record<string, string> = {
@@ -15,7 +15,6 @@ const SHEET_TITLES: Record<string, string> = {
   compare: 'panel.compare',
   chart: 'panel.graph',
   guided: 'mode.guided',
-  exam: 'mode.exam',
 };
 
 function ChartSheet() {
@@ -53,11 +52,9 @@ function SheetBody({ kind }: { kind: string }) {
       return <ChartSheet />;
     case 'guided':
       return <GuidedPanel />;
-    case 'exam':
-      return <ExamPanel />;
     case 'explain':
     default:
-      return mode === 'guided' ? <GuidedPanel /> : mode === 'exam' ? <ExamPanel /> : <ExplainPanel />;
+      return mode === 'guided' ? <GuidedPanel /> : <ExplainPanel />;
   }
 }
 
@@ -70,7 +67,7 @@ export function MobileShell() {
   const tabs = [
     { id: 'palette', label: t(language, 'panel.components'), icon: 'circuit' as const },
     { id: 'inspector', label: t(language, 'panel.properties'), icon: 'sliders' as const },
-    { id: 'explain', label: mode === 'guided' ? t(language, 'mode.guided') : mode === 'exam' ? t(language, 'mode.exam') : t(language, 'panel.explain'), icon: 'zap' as const },
+    { id: 'explain', label: mode === 'guided' ? t(language, 'mode.guided') : t(language, 'panel.explain'), icon: 'zap' as const },
     { id: 'compare', label: t(language, 'panel.compare'), icon: 'layers' as const },
     { id: 'chart', label: t(language, 'panel.graph'), icon: 'chart' as const },
   ];

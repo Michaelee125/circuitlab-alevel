@@ -75,12 +75,12 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing) | 65 / 65 passed |
-| Playwright desktop project | 18 / 18 passed |
+| Vitest (physics, transients, reasoning, teaching, routing) | 61 / 61 passed |
+| Playwright desktop project | 17 / 17 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 39 passed, 57 intentionally skipped (viewport-specific) |
+| Total e2e | 38 passed, 54 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

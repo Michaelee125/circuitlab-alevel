@@ -39,7 +39,6 @@ function ModeSwitch({ compact = false }: { compact?: boolean }) {
         options={[
           { id: 'explore', label: t(language, 'mode.explore') },
           { id: 'guided', label: t(language, 'mode.guided') },
-          { id: 'exam', label: t(language, 'mode.exam') },
         ]}
       />
     </div>
@@ -201,12 +200,10 @@ function SettingsMenu() {
             <span className="menu-row-label">{t(language, 'canvas.grid')}</span>
             <MenuSwitch checked={showGrid} onChange={setShowGrid} label={t(language, 'canvas.grid')} />
           </div>
-          {useCircuitStore.getState().mode !== 'exam' && (
-            <div className="menu-row">
-              <span className="menu-row-label">{t(language, 'explain.pin')}</span>
-              <MenuSwitch checked={pinned} onChange={toggleExplainPinned} label={t(language, 'explain.pin')} />
-            </div>
-          )}
+          <div className="menu-row">
+            <span className="menu-row-label">{t(language, 'explain.pin')}</span>
+            <MenuSwitch checked={pinned} onChange={toggleExplainPinned} label={t(language, 'explain.pin')} />
+          </div>
           <div className="menu-row">
             <span className="menu-row-label">{t(language, 'view.quality')}</span>
             <Segmented
@@ -326,7 +323,6 @@ export function MobileTopBar() {
           options={[
             { id: 'explore', label: language === 'zh' ? '探索' : 'Explore' },
             { id: 'guided', label: language === 'zh' ? '引导' : 'Guided' },
-            { id: 'exam', label: language === 'zh' ? '考试' : 'Exam' },
           ]}
         />
       </div>

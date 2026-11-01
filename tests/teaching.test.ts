@@ -3,13 +3,11 @@ import { solveCircuit, linearFit, ldrIlluminanceForResistance } from '@circuitla
 import { explainChange } from '@circuitlab/reasoning-engine';
 import type { CircuitDocument } from '@circuitlab/circuit-core';
 import {
-  EXAM_QUESTIONS,
   EXPERIMENTS,
   answerGuidedQuestion,
   buildExperimentDocument,
   buildGuidedQuestions,
   emptyGuidedState,
-  gradeExamAnswer,
   internalResistanceDataset,
 } from '@circuitlab/teaching-engine';
 
@@ -151,43 +149,5 @@ describe('guided mode', () => {
       markingScheme: 'software-authored',
     });
     expect(questions).toHaveLength(0);
-  });
-});
-
-describe('exam mode marking', () => {
-  it('awards full marks to every model answer', () => {
-    for (const question of EXAM_QUESTIONS) {
-      const grade = gradeExamAnswer(question, question.modelAnswer.en);
-      expect(grade.awarded, `${question.id} should score ${question.marks}`).toBe(question.marks);
-      expect(grade.schemeType).toBe('software-authored');
-      expect(question.verified).toBe(false);
-    }
-  });
-
-  it('awards no marks to an empty answer', () => {
-    for (const question of EXAM_QUESTIONS) {
-      const grade = gradeExamAnswer(question, '');
-      expect(grade.awarded).toBe(0);
-      expect(grade.percentage).toBe(0);
-    }
-  });
-
-  it('gives partial credit and marks individual points', () => {
-    const question = EXAM_QUESTIONS.find((q) => q.id === 'internal-resistance')!;
-    const grade = gradeExamAnswer(question, 'The total resistance is 3.0 ohm and the current is 2.0 A.');
-    expect(grade.awarded).toBe(2);
-    expect(grade.points.filter((p) => p.awarded)).toHaveLength(2);
-    expect(grade.points.find((p) => p.id === 'm1')?.awarded).toBe(true);
-    expect(grade.points.find((p) => p.id === 'm4')?.awarded).toBe(false);
-  });
-
-  it('does not treat a parallel answer as a series answer', () => {
-    const series = EXAM_QUESTIONS.find((q) => q.id === 'ldr-series')!;
-    const parallelAnswer =
-      'The p.d. across the fixed resistor stays at 12 V and its current is unchanged. The LDR resistance falls so the total current increases.';
-    const grade = gradeExamAnswer(series, parallelAnswer);
-    const m5 = grade.points.find((p) => p.id === 'm5');
-    // The final marking point claims the resistor p.d. rises; "stays" must not score it.
-    expect(m5?.awarded).toBe(false);
   });
 });

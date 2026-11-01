@@ -13,8 +13,7 @@ import {
   Toggle,
 } from '@circuitlab/ui';
 import type { PhysicsLaw, QuantityChange } from '@circuitlab/reasoning-engine';
-import { EXAM_QUESTIONS, getExperiment, gradeExamAnswer } from '@circuitlab/teaching-engine';
-import type { ExamQuestion } from '@circuitlab/teaching-engine';
+import { getExperiment } from '@circuitlab/teaching-engine';
 import {
   useCircuitStore,
   useComparison,
@@ -747,124 +746,6 @@ export function GuidedPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// Exam
-// ---------------------------------------------------------------------------
-
-export function ExamPanel() {
-  const language = useCircuitStore((s) => s.language);
-  const [questionId, setQuestionId] = useState<ExamQuestion['id']>(EXAM_QUESTIONS[0].id);
-  const [answer, setAnswer] = useState('');
-  const [grade, setGrade] = useState<ReturnType<typeof gradeExamAnswer> | null>(null);
-  const question = EXAM_QUESTIONS.find((q) => q.id === questionId) ?? EXAM_QUESTIONS[0];
-
-  const submit = () => {
-    if (!answer.trim()) {
-      useCircuitStore.getState().toastMessage(t(language, 'exam.emptyAnswer'), 'error');
-      return;
-    }
-    setGrade(gradeExamAnswer(question, answer));
-  };
-
-  return (
-    <div>
-      <div className="field">
-        <div className="field-head">
-          <span className="field-label">{t(language, 'exam.choose')}</span>
-          <span className="field-unit">{question.marks} {language === 'zh' ? '分' : 'marks'}</span>
-        </div>
-        <select
-          className="input"
-          value={questionId}
-          aria-label={t(language, 'exam.choose')}
-          onChange={(event) => {
-            setQuestionId(event.target.value);
-            setAnswer('');
-            setGrade(null);
-          }}
-        >
-          {EXAM_QUESTIONS.map((q) => (
-            <option key={q.id} value={q.id}>
-              {language === 'zh' ? q.title.zh : q.title.en}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="compare-card" style={{ marginBottom: 10 }}>
-        <div className="compare-card-head">
-          <LT value={question.title} />
-          <Badge tone="accent">{question.marks} {language === 'zh' ? '分' : 'marks'}</Badge>
-        </div>
-        <div style={{ padding: 11, fontSize: 12.5, lineHeight: 1.65, color: 'var(--ink-2)' }}>
-          <LT value={question.prompt} block />
-        </div>
-      </div>
-      <div className="field">
-        <div className="field-head">
-          <span className="field-label">{t(language, 'exam.answer')}</span>
-        </div>
-        <textarea
-          className="input"
-          value={answer}
-          placeholder={t(language, 'exam.placeholder')}
-          onChange={(event) => {
-            setAnswer(event.target.value);
-            setGrade(null);
-          }}
-        />
-      </div>
-      <Button variant="primary" icon="check" onClick={submit} style={{ width: '100%' }}>
-        {t(language, 'exam.submit')}
-      </Button>
-      <div className="notice">
-        <Icon name="info" size={14} />
-        <span>{t(language, 'exam.notice')}</span>
-      </div>
-
-      {grade && (
-        <div style={{ marginTop: 14 }}>
-          <div className="meter-cards">
-            <div className="meter-card">
-              <div className="meter-card-label">{t(language, 'exam.awarded')}</div>
-              <div className="meter-card-value">
-                {grade.awarded} / {grade.total}
-              </div>
-            </div>
-            <div className="meter-card">
-              <div className="meter-card-label">%</div>
-              <div className="meter-card-value">{grade.percentage}%</div>
-            </div>
-          </div>
-          <div className="section-label">{t(language, 'explain.marking')}</div>
-          <ul className="marking-list">
-            {grade.points.map((point) => (
-              <li key={point.id} style={{ opacity: point.awarded ? 1 : 0.6 }}>
-                <span
-                  className="marking-check"
-                  style={
-                    point.awarded
-                      ? undefined
-                      : { borderColor: 'color-mix(in srgb, var(--danger) 40%, transparent)', color: 'var(--danger)' }
-                  }
-                >
-                  <Icon name={point.awarded ? 'check' : 'x'} size={10} />
-                </span>
-                <span>
-                  <LT value={point.text} block />
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="section-label">{t(language, 'exam.modelAnswer')}</div>
-          <div className="answer-box">
-            <LT value={question.modelAnswer} block />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Rail
 // ---------------------------------------------------------------------------
 
@@ -876,27 +757,20 @@ export function RightRail() {
   const pinnedPreference = useCircuitStore((s) => s.explainPinned);
   const toggleExplainPinned = useCircuitStore((s) => s.toggleExplainPinned);
 
-  // In exam mode the explanation must stay hidden, so pinning is disabled there.
-  const canPin = mode !== 'exam';
-  const pinned = pinnedPreference && canPin;
+  const pinned = pinnedPreference;
 
-  const allTabs: { id: RightTab; label: string; icon: 'sliders' | 'zap' | 'layers' | 'help' | 'book' }[] =
+  const allTabs: { id: RightTab; label: string; icon: 'sliders' | 'zap' | 'layers' | 'help' }[] =
     mode === 'guided'
       ? [
           { id: 'guided', label: t(language, 'mode.guided'), icon: 'help' },
           { id: 'explain', label: t(language, 'panel.explain'), icon: 'zap' },
           { id: 'inspector', label: t(language, 'panel.properties'), icon: 'sliders' },
         ]
-      : mode === 'exam'
-        ? [
-            { id: 'exam', label: t(language, 'mode.exam'), icon: 'book' },
-            { id: 'explain', label: t(language, 'panel.explain'), icon: 'zap' },
-          ]
-        : [
-            { id: 'inspector', label: t(language, 'panel.properties'), icon: 'sliders' },
-            { id: 'explain', label: t(language, 'panel.explain'), icon: 'zap' },
-            { id: 'compare', label: t(language, 'panel.compare'), icon: 'layers' },
-          ];
+      : [
+          { id: 'inspector', label: t(language, 'panel.properties'), icon: 'sliders' },
+          { id: 'explain', label: t(language, 'panel.explain'), icon: 'zap' },
+          { id: 'compare', label: t(language, 'panel.compare'), icon: 'layers' },
+        ];
 
   const tabs = pinned ? allTabs.filter((tab) => tab.id !== 'explain') : allTabs;
   const active = tabs.some((tab) => tab.id === rightTab) ? rightTab : tabs[0].id;
@@ -907,7 +781,6 @@ export function RightRail() {
       {active === 'explain' && <ExplainPanel />}
       {active === 'compare' && <ComparePanel />}
       {active === 'guided' && <GuidedPanel />}
-      {active === 'exam' && <ExamPanel />}
     </>
   );
 
@@ -927,18 +800,16 @@ export function RightRail() {
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        {canPin && (
-          <IconButton
-            icon="pin"
-            size={14}
-            tone="ghost"
-            active={pinned}
-            aria-pressed={pinned}
-            label={t(language, pinned ? 'explain.unpin' : 'explain.pin')}
-            onClick={toggleExplainPinned}
-            className="pin-toggle"
-          />
-        )}
+        <IconButton
+          icon="pin"
+          size={14}
+          tone="ghost"
+          active={pinned}
+          aria-pressed={pinned}
+          label={t(language, pinned ? 'explain.unpin' : 'explain.pin')}
+          onClick={toggleExplainPinned}
+          className="pin-toggle"
+        />
       </div>
 
       {pinned ? (

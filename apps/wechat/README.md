@@ -33,7 +33,7 @@ The shared packages are designed for a native port:
 - `@circuitlab/circuit-core` — model, topology and hit testing (no DOM)
 - `@circuitlab/physics-engine` — MNA solver (no DOM)
 - `@circuitlab/reasoning-engine` — verified causal chains (no DOM)
-- `@circuitlab/teaching-engine` — experiments, guided and exam content
+- `@circuitlab/teaching-engine` — experiments and guided content
 - `@circuitlab/platform-adapters` — `WeChatStorage`, `WeChatShare`, export and
   navigation implementations behind the same interfaces as the web
 

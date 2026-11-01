@@ -169,4 +169,4 @@ export type Language = 'en' | 'zh' | 'bilingual';
 export type ViewMode = 'schematic' | 'realistic';
 export type ThemeMode = 'dark' | 'light';
 export type QualityLevel = 'high' | 'medium' | 'low';
-export type AppMode = 'explore' | 'guided' | 'exam';
+export type AppMode = 'explore' | 'guided';

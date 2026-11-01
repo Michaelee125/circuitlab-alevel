@@ -130,21 +130,6 @@ test.describe('CircuitLab desktop', () => {
     await expect(page.getByText('Circuit loaded')).toBeVisible();
   });
 
-  test('marks an exam answer against the software-authored points', async ({ page }) => {
-    await page.getByRole('tab', { name: 'Exam' }).first().click();
-    const select = page.getByLabel('Choose a question');
-    await select.selectOption({ label: 'EMF and internal resistance' });
-    const answer =
-      'R_total = 2.5 + 0.50 = 3.0 Ω. I = EMF / R_total = 6.0 / 3.0 = 2.0 A. The lost volts are I × r = 2.0 × 0.50 = 1.0 V. The terminal p.d. is 6.0 − 1.0 = 5.0 V.';
-    await page.locator('textarea').fill(answer);
-    await page.getByRole('button', { name: 'Mark my answer' }).click();
-    await expect(page.getByText('4 / 4')).toBeVisible();
-    await page.locator('textarea').fill('I am not sure.');
-    await page.getByRole('button', { name: 'Mark my answer' }).click();
-    await expect(page.getByText('0 / 4')).toBeVisible();
-    await expect(page.getByText(/not an official mark scheme/i)).toBeVisible();
-  });
-
   test('guided mode checks each step of the chain', async ({ page }) => {
     await loadExperiment(page, 'LDR circuit');
     await page.getByRole('button', { name: /Increase light/i }).first().click();

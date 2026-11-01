@@ -66,8 +66,8 @@ stays at the supply voltage and only the LDR branch current changes.
 | Schematic and realistic rendering, same model and results | ✅ |
 | MNA DC solver with internal resistance, ideal meters, open/short/singular handling | ✅ |
 | Non-linear lamp and diode models, RC analytic transients | ✅ |
-| Physics reasoning engine (English + Chinese, marking points, exam-style answer) | ✅ |
-| Explore / Guided / Exam modes, before/after Compare | ✅ |
+| Physics reasoning engine (English + Chinese, marking points, model answer) | ✅ |
+| Explore / Guided modes, before/after Compare | ✅ |
 | English / 中文 / Bilingual switching, always visible in the top bar | ✅ |
 | Pinnable Explain panel that stays visible while you edit | ✅ |
 | Internal resistance drawn in-circuit + terminal p.d. / lost-volts readouts | ✅ |
@@ -99,9 +99,9 @@ drawn with layered gradients (ceramic, metal, glass, LCD) and animate in real
 time: the lamp halo grows with dissipated power, a soft ring pulses when a
 component's current changes, and charge carriers flow along the wires.
 
-**Not claimed:** official mark schemes. Exam mode uses CircuitLab's own
-software-authored practice marking points, clearly labelled in the UI and in
-this repository.
+**Not claimed:** official mark schemes. The marking points shown in Explain are
+CircuitLab's own software-authored practice criteria, clearly labelled in the UI
+and in this repository.
 
 ## Quick start
 
@@ -137,7 +137,7 @@ packages/
   circuit-core/         Data model, geometry, topology, validation, serialisation
   physics-engine/       MNA solver, non-linear models, RC transients, sweeps
   reasoning-engine/     Structural rules + verified causal chains (en/zh)
-  teaching-engine/      Experiments, guided questions, exam questions, marking
+  teaching-engine/      Experiments, guided questions and datasets
   circuit-renderer/     PixiJS schematic and realistic renderers, particles
   ui/                   Design-system primitives
   i18n/                 UI strings and unit formatting
