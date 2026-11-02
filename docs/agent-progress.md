@@ -18,7 +18,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **69 passed**
+- Unit/physics/reasoning/teaching/routing/flow tests: **77 passed**
 - Desktop e2e: **20 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
 - Total Playwright: **41 passed**, 63 intentionally skipped
@@ -123,6 +123,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - The top bar is an absolute overlay with `pointer-events: none`; only the mode switch, language picker and action cluster capture touches, so the drawing can be panned in the gaps. The toolbar and dock remain glass and now blur the live drawing underneath.
 - The fit and the value cards use the measured toolbar/tab-bar geometry (`data-inset-top` / `data-inset-bottom`), including notch safe areas and a wrapping toolbar, instead of fixed 118/96 guesses.
 - E2E asserts the full-bleed canvas extends behind the dock and that the top inset is measured. 69 unit / 41 Playwright checks.
+
+## Clean routing and current direction (fifteenth review)
+
+- Replaced the lane-only auto-router with port-flexible candidates: each terminal may leave along its normal or tangentially, and candidates are scored by length, bends, component cuts, crossings and overlaps. Component interiors are rejected; short wires are routed first so long returns avoid them. The preset experiments report zero component cuts; a deliberately messy two-row LDR circuit now routes with shorter, non-overlapping paths.
+- Added one-tap Auto-arrange to the mobile toolbar (it was desktop-only). `autoLayout` now detects a simple source → series chain → return loop and lays it out as one row, with any voltmeters below the element they measure. The same two-row circuit becomes a straight row after the tap.
+- Fixed current-animation direction and magnitude: the solver exposes per-terminal currents (entering positive), and the renderer uses the smaller terminal current, so parallel branches animate with their branch current, ideal voltmeter leads stay still, and the wiper of a sliding rheostat uses its own terminal current. A pure `wireFlow` helper and tests cover series, reversed, parallel, voltmeter and potentiometer cases.
+- Routing tests cover all presets, a tidied two-row circuit, orthogonality and overlaps. 77 unit / 41 Playwright checks.
 
 ## Known limitations
 

@@ -178,8 +178,113 @@ export function connectedPins(doc: CircuitDocument): Set<string> {
  * the component graph. Positions are snapped to the grid and columns are spaced
  * so labels never collide.
  */
+
+/**
+ * Recognise a single source → series chain → source loop. This is the common
+ * teaching circuit (source, resistor/LDR/lamp/ammeter, return). Rows keep the
+ * auto-arranged layout clean; shunt voltmeters sit under the element they
+ * measure. Returns null for branched circuits so the generic layout applies.
+ */
+function seriesRowLayout(doc: CircuitDocument): Map<string, { x: number; y: number }> | null {
+  const source = doc.components.find((c) => c.kind === 'cell' || c.kind === 'battery');
+  if (!source) return null;
+  const topology = buildTopology(doc);
+  const nodeOf = (comp: ComponentInstance, terminalId: string) =>
+    topology.nodeOfPin[pinKey(comp.id, terminalId)];
+  const sourceDef = getComponentDef(source.kind);
+  const posTerm = sourceDef.terminals.find((t) => t.id === 'pos');
+  const negTerm = sourceDef.terminals.find((t) => t.id === 'neg');
+  if (!posTerm || !negTerm) return null;
+  const posNode = nodeOf(source, posTerm.id);
+  const negNode = nodeOf(source, negTerm.id);
+  if (!posNode || !negNode) return null;
+
+  const pinsAt = new Map<string, { comp: ComponentInstance; terminalId: string }[]>();
+  for (const comp of doc.components) {
+    for (const terminal of getComponentDef(comp.kind).terminals) {
+      const node = nodeOf(comp, terminal.id);
+      if (!node) continue;
+      const list = pinsAt.get(node) ?? [];
+      list.push({ comp, terminalId: terminal.id });
+      pinsAt.set(node, list);
+    }
+  }
+
+  const chain: ComponentInstance[] = [];
+  const visited = new Set<string>([source.id]);
+  let node = posNode;
+  let previous = source.id;
+  for (let guard = 0; guard <= doc.components.length + 1; guard += 1) {
+    if (node === negNode) break;
+    const candidates = (pinsAt.get(node) ?? []).filter((pin) => {
+      if (pin.comp.id === previous || visited.has(pin.comp.id)) return false;
+      const def = getComponentDef(pin.comp.kind);
+      return def.terminals.length === 2 && pin.comp.kind !== 'voltmeter';
+    });
+    if (candidates.length !== 1) return null;
+    const chosen = candidates[0];
+    const def = getComponentDef(chosen.comp.kind);
+    const other = def.terminals.find((t) => t.id !== chosen.terminalId);
+    if (!other) return null;
+    const next = nodeOf(chosen.comp, other.id);
+    if (!next) return null;
+    chain.push(chosen.comp);
+    visited.add(chosen.comp.id);
+    previous = chosen.comp.id;
+    node = next;
+  }
+  if (node !== negNode) return null;
+
+  const shunts: { comp: ComponentInstance; target: ComponentInstance }[] = [];
+  for (const comp of doc.components) {
+    if (visited.has(comp.id)) continue;
+    if (comp.kind !== 'voltmeter') return null;
+    const def = getComponentDef(comp.kind);
+    if (def.terminals.length !== 2) return null;
+    const n1 = nodeOf(comp, def.terminals[0].id);
+    const n2 = nodeOf(comp, def.terminals[1].id);
+    const target = [source, ...chain].find((candidate) => {
+      const candidateDef = getComponentDef(candidate.kind);
+      if (candidateDef.terminals.length !== 2) return false;
+      const a = nodeOf(candidate, candidateDef.terminals[0].id);
+      const b = nodeOf(candidate, candidateDef.terminals[1].id);
+      return (a === n1 && b === n2) || (a === n2 && b === n1);
+    });
+    if (!target) return null;
+    shunts.push({ comp, target });
+  }
+
+  const row = [source, ...chain];
+  const positions = new Map<string, { x: number; y: number }>();
+  row.forEach((comp, index) => positions.set(comp.id, { x: 160 + index * 220, y: 200 }));
+  const shuntCount = new Map<string, number>();
+  for (const { comp, target } of shunts) {
+    const targetPosition = positions.get(target.id);
+    if (!targetPosition) return null;
+    const index = shuntCount.get(target.id) ?? 0;
+    shuntCount.set(target.id, index + 1);
+    positions.set(comp.id, { x: targetPosition.x, y: 380 + index * 120 });
+  }
+  return positions;
+}
+
 export function autoLayout(doc: CircuitDocument): CircuitDocument {
   if (doc.components.length === 0) return doc;
+  const series = seriesRowLayout(doc);
+  if (series) {
+    return {
+      ...doc,
+      updatedAt: new Date().toISOString(),
+      components: doc.components.map((comp) => {
+        const position = series.get(comp.id) ?? { x: comp.x, y: comp.y };
+        return {
+          ...comp,
+          x: Math.round(position.x / GRID) * GRID,
+          y: Math.round(position.y / GRID) * GRID,
+        };
+      }),
+    };
+  }
   const topology = buildTopology(doc);
   const byId = new Map(doc.components.map((c) => [c.id, c]));
 

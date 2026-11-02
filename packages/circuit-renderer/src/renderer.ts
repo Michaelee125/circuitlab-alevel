@@ -18,6 +18,7 @@ import type { CircuitSolution } from '@circuitlab/physics-engine';
 import { formatQuantity } from '@circuitlab/i18n';
 import { paletteFor, type Palette } from './palette';
 import { drawRealisticBody, drawSchematicBody } from './drawing';
+import { wireFlow } from './flow';
 
 export interface RenderState {
   doc: CircuitDocument;
@@ -836,29 +837,15 @@ export class CircuitRenderer {
         segments.push(length);
         total += length;
       }
-      const fromReading = solution.components[wire.from.componentId];
-      const toReading = solution.components[wire.to.componentId];
-      const fromComp = doc.components.find((c) => c.id === wire.from.componentId);
-      const toComp = doc.components.find((c) => c.id === wire.to.componentId);
-      const fromIndex = fromComp
-        ? getComponentDef(fromComp.kind).terminals.findIndex((t) => t.id === wire.from.terminalId)
-        : 0;
-      const toIndex = toComp
-        ? getComponentDef(toComp.kind).terminals.findIndex((t) => t.id === wire.to.terminalId)
-        : 0;
-      const inwardFrom = fromReading ? (fromIndex === 0 ? fromReading.current : -fromReading.current) : 0;
-      const inwardTo = toReading ? (toIndex === 0 ? toReading.current : -toReading.current) : 0;
-      const useFrom = Math.abs(inwardFrom) >= Math.abs(inwardTo);
-      const inward = useFrom ? inwardFrom : inwardTo;
-      const magnitude = Math.abs(inward);
-      if (magnitude < 1e-7) continue;
+      const flow = wireFlow(wire, solution);
+      if (!flow || flow.current < 1e-7) continue;
       const count = Math.max(3, Math.round((total / 70) * density));
       this.flows.push({
         points,
         segments,
         total,
-        magnitude,
-        direction: inward > 0 ? -1 : 1,
+        magnitude: flow.current,
+        direction: flow.direction,
         phase: Math.random() * total,
         count,
       });

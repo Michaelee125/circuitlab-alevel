@@ -499,6 +499,155 @@ function offsetStraightRoute(route: Point[], lane: number): Point[] {
  * detour it introduces. This keeps wires separated and out of components even
  * after components are dragged to new positions.
  */
+
+// ---------------------------------------------------------------------------
+// Clean auto-routing: every wire can leave a terminal along its normal or
+// tangentially along the component edge. Candidates are scored by length,
+// bends, crossings and overlap, and any candidate that cuts through a
+// component body is rejected. This keeps dragged multi-row circuits tidy
+// without forcing long loops around the terminal pins.
+// ---------------------------------------------------------------------------
+
+interface PortPoint {
+  point: Point;
+  normal: boolean;
+}
+
+function pathLength(points: Point[]): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    total += Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y);
+  }
+  return total;
+}
+
+function pathBends(points: Point[]): number {
+  return Math.max(0, axisSegments(points).length - 1);
+}
+
+function pathCrossings(a: Point[], b: Point[]): number {
+  const segsA = axisSegments(a);
+  const segsB = axisSegments(b);
+  let count = 0;
+  for (const sa of segsA) {
+    for (const sb of segsB) {
+      if (sa.horizontal === sb.horizontal) continue;
+      const h = sa.horizontal ? sa : sb;
+      const v = sa.horizontal ? sb : sa;
+      if (
+        v.fixed > Math.min(h.a.x, h.b.x) + 6 &&
+        v.fixed < Math.max(h.a.x, h.b.x) - 6 &&
+        h.fixed > Math.min(v.a.y, v.b.y) + 6 &&
+        h.fixed < Math.max(v.a.y, v.b.y) - 6
+      ) {
+        count += 1;
+      }
+    }
+  }
+  return count;
+}
+
+function terminalPorts(comp: ComponentInstance, terminal: TerminalDef): PortPoint[] {
+  const p = terminalWorld(comp, terminal);
+  const n = terminalNormal(comp, terminal.id);
+  const horizontal = Math.abs(n.x) >= Math.abs(n.y);
+  const dirs = horizontal
+    ? [
+        { x: Math.sign(n.x) || 1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 },
+      ]
+    : [
+        { x: 0, y: Math.sign(n.y) || 1 },
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+      ];
+  return dirs.map((dir) => ({
+    point: { x: p.x + dir.x * 18, y: p.y + dir.y * 18 },
+    normal: dir.x === n.x && dir.y === n.y,
+  }));
+}
+
+function connectPorts(a: Point, b: Point): Point[][] {
+  const out: Point[][] = [];
+  const push = (pts: Point[]) => {
+    const deduped = dedupeCollinear(pts);
+    if (deduped.length >= 2) out.push(deduped);
+  };
+  if (Math.abs(a.x - b.x) < 0.5 || Math.abs(a.y - b.y) < 0.5) push([a, b]);
+  push([a, { x: b.x, y: a.y }, b]);
+  push([a, { x: a.x, y: b.y }, b]);
+  const xs = new Set([
+    (a.x + b.x) / 2,
+    Math.min(a.x, b.x) - 40,
+    Math.max(a.x, b.x) + 40,
+    a.x,
+    b.x,
+  ]);
+  for (const x of xs) push([a, { x, y: a.y }, { x, y: b.y }, b]);
+  const ys = new Set([
+    (a.y + b.y) / 2,
+    Math.min(a.y, b.y) - 40,
+    Math.max(a.y, b.y) + 40,
+    a.y,
+    b.y,
+  ]);
+  for (const y of ys) push([a, { x: a.x, y }, { x: b.x, y }, b]);
+  const seen = new Set<string>();
+  return out.filter((path) => {
+    const key = path.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+interface RouteCandidate {
+  points: Point[];
+  tangent: number;
+}
+
+function portRouteCandidates(doc: CircuitDocument, wire: Wire): RouteCandidate[] {
+  const aComp = doc.components.find((c) => c.id === wire.from.componentId);
+  const bComp = doc.components.find((c) => c.id === wire.to.componentId);
+  if (!aComp || !bComp) return [];
+  const aTerm = getTerminalDef(aComp, wire.from.terminalId);
+  const bTerm = getTerminalDef(bComp, wire.to.terminalId);
+  if (!aTerm || !bTerm) return [];
+  const from = terminalWorld(aComp, aTerm);
+  const to = terminalWorld(bComp, bTerm);
+  const out: RouteCandidate[] = [];
+  const seen = new Set<string>();
+  for (const aPort of terminalPorts(aComp, aTerm)) {
+    for (const bPort of terminalPorts(bComp, bTerm)) {
+      for (const middle of connectPorts(aPort.point, bPort.point)) {
+        const points = dedupeCollinear([from, ...middle, to]);
+        const key = points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ points, tangent: (aPort.normal ? 0 : 1) + (bPort.normal ? 0 : 1) });
+      }
+    }
+  }
+  return out;
+}
+
+function routeHitsBodies(
+  points: Point[],
+  bodies: { id: string; box: Rect }[],
+  wire: Wire,
+): boolean {
+  const segments = axisSegments(points);
+  const endpoints = new Set([wire.from.componentId, wire.to.componentId]);
+  for (const segment of segments) {
+    for (const body of bodies) {
+      const pad = endpoints.has(body.id) ? 0 : 4;
+      if (segmentHitsBox(segment.a, segment.b, body.box, pad)) return true;
+    }
+  }
+  return false;
+}
+
 export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
   const signature = docSignature(doc);
   const cached = routeCache.get(doc);
@@ -506,90 +655,86 @@ export function getWireRoutes(doc: CircuitDocument): Record<string, Point[]> {
 
   const routes: Record<string, Point[]> = {};
   const placed: Point[][] = [];
-  const lanes = [0, 22, -22, 44, -44, 66, -66, 88, -88];
-  const manual = new Map<string, Point[]>();
   for (const wire of doc.wires) {
     const route = manualWireRoute(doc, wire);
     if (route) {
       routes[wire.id] = route;
       placed.push(route);
-      manual.set(wire.id, route);
     }
   }
 
-  for (const wire of doc.wires) {
-    if (manual.has(wire.id)) continue;
-    const obstacles: Rect[] = [];
-    for (const comp of doc.components) {
-      if (comp.id === wire.from.componentId || comp.id === wire.to.componentId) continue;
-      const b = componentBounds(comp);
-      obstacles.push({ x: b.x + 8, y: b.y + 8, width: Math.max(0, b.width - 16), height: Math.max(0, b.height - 16) });
+  const bodies = doc.components.map((comp) => ({ id: comp.id, box: componentBounds(comp) }));
+  const lanes = [0, 22, -22, 44, -44, 66, -66];
+  const endpoint = (wire: Wire) => {
+    const aComp = doc.components.find((c) => c.id === wire.from.componentId);
+    const bComp = doc.components.find((c) => c.id === wire.to.componentId);
+    const aTerm = aComp ? getTerminalDef(aComp, wire.from.terminalId) : undefined;
+    const bTerm = bComp ? getTerminalDef(bComp, wire.to.terminalId) : undefined;
+    if (!aComp || !bComp || !aTerm || !bTerm) return null;
+    const from = terminalWorld(aComp, aTerm);
+    const to = terminalWorld(bComp, bTerm);
+    return { aComp, bComp, aTerm, bTerm, from, to };
+  };
+
+  // Short wires first: they get the cleanest corridors; long returns and meter
+  // leads then route around them instead of the other way round.
+  const autoWires = doc.wires
+    .filter((wire) => !routes[wire.id])
+    .sort((a, b) => {
+      const ea = endpoint(a);
+      const eb = endpoint(b);
+      const da = ea ? Math.abs(ea.from.x - ea.to.x) + Math.abs(ea.from.y - ea.to.y) : 0;
+      const db = eb ? Math.abs(eb.from.x - eb.to.x) + Math.abs(eb.from.y - eb.to.y) : 0;
+      return da - db;
+    });
+
+  for (const wire of autoWires) {
+    const ends = endpoint(wire);
+    if (!ends) continue;
+    const candidates: RouteCandidate[] = portRouteCandidates(doc, wire);
+    for (const lane of lanes) {
+      const base = baseWirePolyline(doc, wire, lane);
+      if (base.length > 1) candidates.push({ points: base, tangent: 0 });
     }
 
-    let best: Point[] = [];
-    let bestScore = Number.POSITIVE_INFINITY;
-    for (const lane of lanes) {
-      const base = baseWirePolyline(doc, wire, 0);
-      const candidate =
-        lane !== 0 && base.length > 0 && base.length <= 3
-          ? offsetStraightRoute(base, lane)
-          : baseWirePolyline(doc, wire, lane);
-      if (candidate.length === 0) continue;
-      const segments = axisSegments(candidate);
-      const core = segments.length > 2 ? segments.slice(1, -1) : segments;
-      let score = Math.abs(lane) * 0.15 + Math.max(0, candidate.length - 2) * 0.4;
+    let cleanBest: { points: Point[]; score: number } | null = null;
+    let fallback: { points: Point[]; score: number } | null = null;
+    const seen = new Set<string>();
+    for (const candidate of candidates) {
+      const key = candidate.points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const hit = routeHitsBodies(candidate.points, bodies, wire);
+      let score = pathLength(candidate.points) * 0.03 + pathBends(candidate.points) * 5;
+      score += candidate.tangent * 6;
       for (const other of placed) {
-        if (pathsOverlap(candidate, other)) score += 120;
+        if (pathsOverlap(candidate.points, other)) score += 80;
+        score += pathCrossings(candidate.points, other) * 16;
       }
-      for (const segment of core) {
-        for (const box of obstacles) {
-          if (segmentHitsBox(segment.a, segment.b, box)) score += 14;
-        }
+      if (!hit && (!cleanBest || score < cleanBest.score)) {
+        cleanBest = { points: candidate.points, score };
       }
-      if (score < bestScore) {
-        bestScore = score;
-        best = candidate;
-      }
-      // A clean, straight route cannot be improved by further detours.
-      if (bestScore === 0) break;
+      if (!fallback || score < fallback.score) fallback = { points: candidate.points, score };
     }
-    if (best.length === 0) best = baseWirePolyline(doc, wire, 0);
-    // If the chosen corridor still crosses another component (common after a
-    // drag), fall back to a visibility-graph route that goes around bodies.
-    const bodies: Rect[] = [];
-    for (const comp of doc.components) {
-      // Include the wire's own components too: a wire leaving a wiper must not
-      // run back through its own body on the way to a target on the far side.
-      const b = componentBounds(comp);
-      bodies.push({ x: b.x - 4, y: b.y - 4, width: b.width + 8, height: b.height + 8 });
-    }
-    if (bodies.length > 0) {
-      const crosses = best.some((point, index) =>
-        index === best.length - 1 ? false : bodies.some((box) => segmentCrossesBox(point, best[index + 1], box)),
+
+    let chosen: Point[] | null = cleanBest?.points ?? null;
+    if (!chosen) {
+      const around = routeAroundComponents(
+        doc,
+        wire,
+        ends.from,
+        terminalNormal(ends.aComp, ends.aTerm.id),
+        ends.to,
+        terminalNormal(ends.bComp, ends.bTerm.id),
+        placed,
       );
-      if (crosses) {
-        const fromComp = doc.components.find((c) => c.id === wire.from.componentId);
-        const toComp = doc.components.find((c) => c.id === wire.to.componentId);
-        const fromDef = fromComp ? getComponentDef(fromComp.kind) : undefined;
-        const toDef = toComp ? getComponentDef(toComp.kind) : undefined;
-        const fromTerm = fromComp && fromDef ? getTerminalDef(fromComp, wire.from.terminalId) : undefined;
-        const toTerm = toComp && toDef ? getTerminalDef(toComp, wire.to.terminalId) : undefined;
-        if (fromComp && toComp && fromTerm && toTerm) {
-          const around = routeAroundComponents(
-            doc,
-            wire,
-            terminalWorld(fromComp, fromTerm),
-            terminalNormal(fromComp, fromTerm.id),
-            terminalWorld(toComp, toTerm),
-            terminalNormal(toComp, toTerm.id),
-            placed,
-          );
-          if (around && around.length > 1) best = around;
-        }
-      }
+      if (around && around.length > 1) chosen = around;
     }
-    routes[wire.id] = best;
-    if (best.length > 0) placed.push(best);
+    if (!chosen) chosen = fallback?.points ?? baseWirePolyline(doc, wire, 0);
+    if (chosen.length > 1) {
+      routes[wire.id] = chosen;
+      placed.push(chosen);
+    }
   }
 
   routeCache.set(doc, { signature, routes });

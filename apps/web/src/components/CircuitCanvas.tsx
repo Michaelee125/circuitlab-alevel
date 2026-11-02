@@ -503,13 +503,11 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
             onClick={() => useCircuitStore.getState().deleteSelected()}
             disabled={!selectionId && !selectedWireId}
           />
-          {!compact && (
-            <IconButton
-              icon="grid"
-              label={t(language, 'action.autoLayout')}
-              onClick={() => useCircuitStore.getState().autoArrange()}
-            />
-          )}
+          <IconButton
+            icon="grid"
+            label={t(language, 'action.autoLayout')}
+            onClick={() => useCircuitStore.getState().autoArrange()}
+          />
           <IconButton
             icon="fit"
             label={t(language, 'action.fit')}

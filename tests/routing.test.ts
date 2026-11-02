@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { componentBounds, getWireRoutes, isOrthogonalRoute, manualWireRoute, moveComponent, moveWireSegment, pathsOverlap, parseCircuitJSON, serializeCircuit, wirePath, wirePolyline, wireSegmentsForEditing } from '@circuitlab/circuit-core';
+import { autoLayout, componentBounds, getWireRoutes, isOrthogonalRoute, manualWireRoute, moveComponent, moveWireSegment, pathsOverlap, parseCircuitJSON, serializeCircuit, wirePath, wirePolyline, wireSegmentsForEditing } from '@circuitlab/circuit-core';
 import { EXPERIMENTS } from '@circuitlab/teaching-engine';
 import { buildDoc } from './helpers';
 
@@ -257,5 +257,106 @@ describe('wire routing', () => {
     const routes = getWireRoutes(doc);
     const [w1, w2] = doc.wires;
     expect(routes[w1.id]).not.toEqual(routes[w2.id]);
+  });
+});
+
+
+describe('clean routing and tidy layout', () => {
+  const twoRow = () =>
+    buildDoc(
+      [
+        { kind: 'cell', label: 'E1', x: 140, y: 260, params: { emf: 12 } },
+        { kind: 'ldr', label: 'LDR1', x: 400, y: 140, params: { referenceResistance: 100, gamma: 0.7, illuminance: 5000 } },
+        { kind: 'resistor', label: 'R1', x: 400, y: 420, params: { resistance: 4 } },
+        { kind: 'ammeter', label: 'A1', x: 660, y: 140 },
+        { kind: 'voltmeter', label: 'V1', x: 660, y: 420 },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 3, 'a'],
+        [3, 'b', 0, 'neg'],
+        [2, 'a', 4, 'a'],
+        [2, 'b', 4, 'b'],
+      ],
+      'Two-row probe',
+    );
+
+  it('lays a series loop out as one row with its voltmeter underneath', () => {
+    const tidy = autoLayout(twoRow());
+    const byLabel = Object.fromEntries(tidy.components.map((comp) => [comp.label ?? '', comp]));
+    expect(byLabel.E1.y).toBe(byLabel.LDR1.y);
+    expect(byLabel.LDR1.y).toBe(byLabel.R1.y);
+    expect(byLabel.R1.y).toBe(byLabel.A1.y);
+    expect(byLabel.V1.y).toBeGreaterThan(byLabel.R1.y);
+    expect(byLabel.E1.x).toBeLessThan(byLabel.LDR1.x);
+    expect(byLabel.LDR1.x).toBeLessThan(byLabel.R1.x);
+    expect(byLabel.R1.x).toBeLessThan(byLabel.A1.x);
+  });
+
+  it('routes the tidied circuit without cutting through components', () => {
+    const tidy = autoLayout(twoRow());
+    const routes = getWireRoutes(tidy);
+    for (const wire of tidy.wires) {
+      const route = routes[wire.id];
+      expect(route?.length ?? 0).toBeGreaterThan(1);
+      expect(isOrthogonalRoute(route)).toBe(true);
+      for (let i = 1; i < route!.length; i += 1) {
+        const a = route![i - 1];
+        const b = route![i];
+        for (const comp of tidy.components) {
+          const box = componentBounds(comp);
+          const horizontal = Math.abs(a.y - b.y) < 0.5;
+          const crosses = horizontal
+            ? a.y > box.y + 1 &&
+              a.y < box.y + box.height - 1 &&
+              Math.max(a.x, b.x) > box.x + 1 &&
+              Math.min(a.x, b.x) < box.x + box.width - 1
+            : a.x > box.x + 1 &&
+              a.x < box.x + box.width - 1 &&
+              Math.max(a.y, b.y) > box.y + 1 &&
+              Math.min(a.y, b.y) < box.y + box.height - 1;
+          expect(crosses, `${wire.id} crosses ${comp.label ?? comp.kind}`).toBe(false);
+        }
+      }
+    }
+    const routeList = Object.values(routes);
+    for (let i = 0; i < routeList.length; i += 1) {
+      for (let j = i + 1; j < routeList.length; j += 1) {
+        expect(pathsOverlap(routeList[i], routeList[j])).toBe(false);
+      }
+    }
+  });
+
+  it('keeps every preset experiment free of component cuts', () => {
+    for (const experiment of EXPERIMENTS) {
+      const doc = experiment.build();
+      const routes = getWireRoutes(doc);
+      for (const wire of doc.wires) {
+        const route = routes[wire.id] ?? [];
+        expect(isOrthogonalRoute(route)).toBe(true);
+        for (let i = 1; i < route.length; i += 1) {
+          const a = route[i - 1];
+          const b = route[i];
+          for (const comp of doc.components) {
+            const box = componentBounds(comp);
+            const horizontal = Math.abs(a.y - b.y) < 0.5;
+            const crosses = horizontal
+              ? a.y > box.y + 1 &&
+                a.y < box.y + box.height - 1 &&
+                Math.max(a.x, b.x) > box.x + 1 &&
+                Math.min(a.x, b.x) < box.x + box.width - 1
+              : a.x > box.x + 1 &&
+                a.x < box.x + box.width - 1 &&
+                Math.max(a.y, b.y) > box.y + 1 &&
+                Math.min(a.y, b.y) < box.y + box.height - 1;
+            expect(
+              crosses,
+              `${experiment.id} ${wire.id} crosses ${comp.label ?? comp.kind}`,
+            ).toBe(false);
+          }
+        }
+      }
+    }
   });
 });

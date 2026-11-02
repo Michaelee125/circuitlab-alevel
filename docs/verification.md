@@ -49,6 +49,9 @@ site.
 | Power on value cards | ✅ V / I / R / P rows; source cards show external power and Pr = I²r |
 | Source power breakdown | ✅ inspector + Measurements show external 10.00 W, internal 2.00 W for E = 6 V, r = 0.50 Ω, I = 2 A, with P_EMF = 12.00 W |
 | Mobile floating glass shell | ✅ full-bleed canvas behind the top controls, toolbar and tab dock; measured top/bottom insets keep the fit and value cards clear; e2e asserts the canvas extends behind the dock |
+| Clean auto-routing | ✅ port-flexible candidates, component interiors rejected, overlap/crossing scoring; all 11 presets and a tidied two-row circuit checked for no component cuts |
+| Tidy layout | ✅ series source→chain→return loop collapses to one row with shunt voltmeters below; asserted by unit tests and the mobile Auto-arrange button |
+| Current direction | ✅ terminal-current driven; series loop, reversed wire, parallel branch current, ideal-voltmeter lead and potentiometer wiper cases tested |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |
@@ -81,7 +84,7 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing) | 69 / 69 passed |
+| Vitest (physics, transients, reasoning, teaching, routing, flow) | 77 / 77 passed |
 | Playwright desktop project | 20 / 20 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |

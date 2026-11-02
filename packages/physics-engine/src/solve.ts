@@ -47,6 +47,8 @@ export interface ComponentResult {
   internalPower?: number;
   emf?: number;
   extra?: Record<string, number>;
+  /** Current entering the component at each terminal (A, entering positive). */
+  terminalCurrents?: Record<string, number>;
 }
 
 export interface CircuitSolution {
@@ -524,6 +526,7 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
 
       const absorbed = -terminalVoltage * deliveredCurrent;
       const internalPower = deliveredCurrent * deliveredCurrent * source.internalResistance;
+      const { neg: negId, pos: posId } = sourceTerminals(comp);
       readings.set(comp.id, {
         componentId: comp.id,
         kind: comp.kind,
@@ -539,6 +542,10 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
         deliveredPower: terminalVoltage * deliveredCurrent,
         internalPower,
         emf: source.emf,
+        terminalCurrents: {
+          [negId]: deliveredCurrent,
+          [posId]: -deliveredCurrent,
+        },
       });
     }
 
@@ -588,6 +595,21 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
           va !== undefined && vw !== undefined && vb !== undefined
             ? (va - vw) ** 2 / rAW + (vw - vb) ** 2 / rWB
             : current ** 2 * (va !== undefined && vw !== undefined ? rAW : rWB);
+        const terminalCurrents: Record<string, number> = {};
+        if (va !== undefined) {
+          terminalCurrents.a =
+            vw !== undefined ? (va - vw) / rAW : vb !== undefined ? (va - vb) / total : 0;
+        }
+        if (vb !== undefined) {
+          terminalCurrents.b =
+            vw !== undefined ? (vb - vw) / rWB : va !== undefined ? (vb - va) / total : 0;
+        }
+        if (vw !== undefined) {
+          let wiper = 0;
+          if (va !== undefined) wiper += (vw - va) / rAW;
+          if (vb !== undefined) wiper += (vw - vb) / rWB;
+          terminalCurrents.w = wiper;
+        }
         readings.set(comp.id, {
           componentId: comp.id,
           kind: comp.kind,
@@ -607,6 +629,7 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
             resistanceWB: rWB,
             totalResistance: total,
           },
+          terminalCurrents,
         });
         continue;
       }
@@ -654,6 +677,11 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
         }
       }
 
+      const def = getComponentDef(comp.kind);
+      const terminalCurrents: Record<string, number> = {};
+      def.terminals.forEach((terminal, index) => {
+        terminalCurrents[terminal.id] = index === 0 ? current : index === 1 ? -current : 0;
+      });
       readings.set(comp.id, {
         componentId: comp.id,
         kind: comp.kind,
@@ -665,6 +693,7 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
         voltageMagnitude: Math.abs(voltage),
         resistance,
         valid: true,
+        terminalCurrents,
       });
     }
   }

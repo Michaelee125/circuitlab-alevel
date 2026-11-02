@@ -418,6 +418,11 @@ describe('source power', () => {
     expect(solution.totalPowerDelivered).toBeCloseTo(22, 6);
     expect(solution.totalPowerDissipated).toBeCloseTo(22, 6);
     expect((source.deliveredPower ?? 0) + (source.internalPower ?? 0)).toBeCloseTo(24, 6);
+    expect(source.terminalCurrents?.neg).toBeCloseTo(2, 6);
+    expect(source.terminalCurrents?.pos).toBeCloseTo(-2, 6);
+    const resistor = solution.components[compId(doc, 1)];
+    expect(resistor.terminalCurrents?.a).toBeCloseTo(2, 6);
+    expect(resistor.terminalCurrents?.b).toBeCloseTo(-2, 6);
   });
 });
 
