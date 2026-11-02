@@ -49,7 +49,7 @@ site.
 | Power on value cards | ✅ V / I / R / P rows; source cards show external power and Pr = I²r |
 | Source power breakdown | ✅ inspector + Measurements show external 10.00 W, internal 2.00 W for E = 6 V, r = 0.50 Ω, I = 2 A, with P_EMF = 12.00 W |
 | Mobile floating glass shell | ✅ full-bleed canvas behind the top controls, toolbar and tab dock; measured top/bottom insets keep the fit and value cards clear; e2e asserts the canvas extends behind the dock |
-| Transparent control glass | ✅ in light mode the top controls, toolbar, dock and toast use a 12–16 % white gradient + a cool tint, 2–4 px backdrop blur and a specular edge instead of the previous 72–94 % white fills; the grid and drawing remain visible through them |
+| Transparent control glass | ✅ all top controls, toolbar strips, the dock and the toast now have a **fully transparent background** (`rgba(0, 0, 0, 0)`, no fill); the light theme also removes the backdrop blur so the grid/drawing passes straight through, with only the 0.5 px border, specular top edge and shadow defining the control |
 | Clean auto-routing | ✅ port-flexible candidates, component interiors rejected, overlap/crossing scoring; all 11 presets and a tidied two-row circuit checked for no component cuts |
 | Tidy layout | ✅ series source→chain→return loop collapses to one row with shunt voltmeters below; asserted by unit tests and the mobile Auto-arrange button |
 | Current direction | ✅ terminal-current driven; series loop, reversed wire, parallel branch current, ideal-voltmeter lead and potentiometer wiper cases tested |

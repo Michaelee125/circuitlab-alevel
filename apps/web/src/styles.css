@@ -523,19 +523,17 @@ kbd {
   gap: 3px;
   padding: 4px;
   border-radius: 14px;
-  background: rgba(36, 36, 38, 0.55);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  backdrop-filter: blur(12px) saturate(180%);
+  background: transparent;
+  -webkit-backdrop-filter: blur(6px) saturate(180%);
+  backdrop-filter: blur(6px) saturate(180%);
   border: 0.5px solid var(--line);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4), var(--inner-light);
 }
 
 .light .tool-strip {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 60%, rgba(255, 255, 255, 0)),
-    rgba(60, 90, 130, 0.055);
-  -webkit-backdrop-filter: blur(4px) saturate(190%);
-  backdrop-filter: blur(4px) saturate(190%);
+  background: transparent;
+  -webkit-backdrop-filter: blur(6px) saturate(190%);
+  backdrop-filter: blur(6px) saturate(190%);
   border-color: rgba(255, 255, 255, 0.78);
   box-shadow:
     0 16px 36px rgba(20, 40, 70, 0.14),
@@ -544,9 +542,7 @@ kbd {
 }
 
 .light .canvas-hint {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04)),
-    rgba(70, 95, 130, 0.03);
+  background: transparent;
   border-color: rgba(255, 255, 255, 0.74);
   box-shadow:
     0 12px 28px rgba(20, 40, 70, 0.12),
@@ -558,9 +554,9 @@ kbd {
   color: var(--ink-2);
   padding: 7px 12px;
   border-radius: 12px;
-  background: rgba(30, 30, 32, 0.6);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
+  background: transparent;
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
   border: 0.5px solid var(--line);
   max-width: 100%;
   white-space: nowrap;
@@ -686,6 +682,20 @@ kbd {
   min-height: 0;
 }
 
+
+/* Fully transparent light controls: no fill and no haze, so the grid and
+   drawing read through the glass. The border and specular edge define it. */
+.light .tool-strip,
+.light .mobile-tabbar,
+.light .mobile-actions,
+.light .mobile-topbar .lang-select,
+.light .segmented,
+.light .toast,
+.light .canvas-hint {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* ============================================================== buttons === */
 
 .btn {
@@ -801,7 +811,7 @@ kbd {
 .btn.is-active {
   color: var(--accent-bright);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: var(--accent-soft);
+  background: transparent;
   box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
@@ -825,16 +835,14 @@ kbd {
   padding: 2px;
   border-radius: 10px;
   border: 0.5px solid rgba(255, 255, 255, 0.06);
-  background: rgba(118, 118, 128, 0.24);
+  background: transparent;
 }
 
 .light .segmented {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01)),
-    rgba(60, 90, 130, 0.04);
+  background: transparent;
   border-color: rgba(255, 255, 255, 0.58);
-  -webkit-backdrop-filter: blur(2px) saturate(190%);
-  backdrop-filter: blur(2px) saturate(190%);
+  -webkit-backdrop-filter: blur(3px) saturate(190%);
+  backdrop-filter: blur(3px) saturate(190%);
 }
 
 .segmented-item {
@@ -860,18 +868,18 @@ kbd {
 
 .segmented-item.is-active {
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    inset 0 0 0 0.5px color-mix(in srgb, var(--accent) 42%, transparent),
+    0 0 14px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .light .segmented-item.is-active {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12));
+  background: transparent;
   color: #1c1c1e;
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.12),
-    0 0 0 0.5px rgba(0, 0, 0, 0.04);
+    inset 0 0 0 0.5px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 14px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .badge {
@@ -2013,9 +2021,9 @@ textarea.input {
   padding: 10px 16px;
   border-radius: 14px;
   border: 0.5px solid var(--line-strong);
-  background: rgba(40, 40, 43, 0.86);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
-  backdrop-filter: blur(34px) saturate(190%);
+  background: transparent;
+  -webkit-backdrop-filter: blur(18px) saturate(190%);
+  backdrop-filter: blur(18px) saturate(190%);
   color: var(--ink);
   font-size: 12.5px;
   box-shadow: var(--shadow-pop), var(--inner-light);
@@ -2023,9 +2031,7 @@ textarea.input {
 }
 
 .light .toast {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.22)),
-    rgba(70, 95, 130, 0.04);
+  background: transparent;
   border-color: rgba(255, 255, 255, 0.75);
   box-shadow:
     0 18px 40px rgba(20, 40, 70, 0.16),
@@ -2329,11 +2335,9 @@ textarea.input {
     gap: 2px;
     padding: 6px 6px;
     border-radius: 24px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.025) 48%, rgba(255, 255, 255, 0) 100%),
-      color-mix(in srgb, var(--bg) 56%, transparent);
-    -webkit-backdrop-filter: blur(14px) saturate(200%) brightness(1.02);
-    backdrop-filter: blur(14px) saturate(200%) brightness(1.02);
+    background: transparent;
+    -webkit-backdrop-filter: blur(6px) saturate(200%) brightness(1.02);
+    backdrop-filter: blur(6px) saturate(200%) brightness(1.02);
     border: 0.5px solid color-mix(in srgb, var(--line-strong) 80%, transparent);
     box-shadow:
       0 22px 55px rgba(0, 0, 0, 0.5),
@@ -2343,11 +2347,9 @@ textarea.input {
     z-index: 30;
   }
   .light .mobile-tabbar {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0)),
-      rgba(60, 90, 130, 0.055);
-    -webkit-backdrop-filter: blur(4px) saturate(190%);
-    backdrop-filter: blur(4px) saturate(190%);
+    background: transparent;
+    -webkit-backdrop-filter: blur(6px) saturate(190%);
+    backdrop-filter: blur(6px) saturate(190%);
     border-color: rgba(255, 255, 255, 0.76);
     box-shadow:
       0 22px 50px rgba(20, 40, 70, 0.18),
@@ -2375,10 +2377,8 @@ textarea.input {
   }
   .mobile-tab.is-active {
     color: var(--accent-bright);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
-      var(--accent-soft);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: transparent;
+    box-shadow: inset 0 2px 0 var(--accent);
   }
   .mobile-topbar .segmented {
     padding: 2px;
@@ -2404,9 +2404,9 @@ textarea.input {
     font-size: 10.5px;
     font-weight: 620;
     color: var(--ink-2);
-    -webkit-backdrop-filter: blur(10px) saturate(180%);
-    backdrop-filter: blur(10px) saturate(180%);
-    background-color: var(--glass-thin);
+    -webkit-backdrop-filter: blur(6px) saturate(180%);
+    backdrop-filter: blur(6px) saturate(180%);
+    background-color: transparent;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
     background-repeat: no-repeat;
     background-position: right 7px center;
@@ -2423,28 +2423,26 @@ textarea.input {
     margin-left: 1px;
     border-radius: 11px;
     border: 0.5px solid var(--line);
-    background: var(--glass-thin);
-    -webkit-backdrop-filter: blur(10px) saturate(180%);
-    backdrop-filter: blur(10px) saturate(180%);
+    background: transparent;
+    -webkit-backdrop-filter: blur(6px) saturate(180%);
+    backdrop-filter: blur(6px) saturate(180%);
     box-shadow: var(--inner-light);
     overflow: hidden;
     flex-shrink: 0;
   }
   .light .mobile-actions {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02)),
-      rgba(60, 90, 130, 0.045);
-    -webkit-backdrop-filter: blur(4px) saturate(190%);
-    backdrop-filter: blur(4px) saturate(190%);
+    background: transparent;
+    -webkit-backdrop-filter: blur(6px) saturate(190%);
+    backdrop-filter: blur(6px) saturate(190%);
     border-color: rgba(255, 255, 255, 0.7);
     box-shadow:
       0 10px 26px rgba(20, 40, 70, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.92);
   }
   .light .mobile-topbar .lang-select {
-    background-color: rgba(60, 90, 130, 0.055);
-    -webkit-backdrop-filter: blur(4px) saturate(190%);
-    backdrop-filter: blur(4px) saturate(190%);
+    background-color: transparent;
+    -webkit-backdrop-filter: blur(6px) saturate(190%);
+    backdrop-filter: blur(6px) saturate(190%);
     border-color: rgba(255, 255, 255, 0.7);
     box-shadow:
       0 10px 26px rgba(20, 40, 70, 0.12),
@@ -2490,6 +2488,8 @@ textarea.input {
     width: 32px;
     height: 32px;
     min-height: 32px;
+    background: transparent;
+    border-color: transparent;
   }
   .stage-overlay-top .btn-sm {
     min-height: 32px;
@@ -2503,6 +2503,8 @@ textarea.input {
     width: 32px;
     min-width: 32px;
     padding: 0;
+    background: transparent;
+    border-color: transparent;
   }
   .palette-grid {
     grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
@@ -2660,4 +2662,16 @@ textarea.input {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Final light-mode override: fully transparent and clear (no fill, no haze). */
+.light .tool-strip,
+.light .mobile-tabbar,
+.light .mobile-actions,
+.light .mobile-topbar .lang-select,
+.light .segmented,
+.light .toast,
+.light .canvas-hint {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }

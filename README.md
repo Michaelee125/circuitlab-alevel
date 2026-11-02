@@ -87,7 +87,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Current animation driven by per-terminal currents: branch wires use their branch current and ideal-voltmeter leads stay still | ✅ |
 | Two distinct variable components: 2-terminal adjustable resistor and 3-terminal sliding rheostat with a wiper divider | ✅ |
 | Real-time source power breakdown: terminal/external power and I²r internal power, with the `P_EMF = P_ext + P_r` balance | ✅ |
-| Mobile liquid-glass overlays: the top bar controls, canvas toolbar and bottom dock float over the full-bleed drawing; the fit and value cards measure the real control insets (including safe areas); the controls are transparent glass in both themes, with the grid visible through them | ✅ |
+| Mobile liquid-glass overlays: the top bar controls, canvas toolbar and bottom dock float over the full-bleed drawing; the fit and value cards measure the real control insets (including safe areas); control surfaces are fully transparent (no fill, no haze in light mode) with only a border, specular edge and shadow | ✅ |
 | Responsive controls: toolbar wraps at 320 px and for bilingual labels; palette action collapses to an icon at ≤1180 px; desktop fit also avoids the floating toolbar | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
 | Live V / I / R / P cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch; source cards add external and internal-resistance power | ✅ |

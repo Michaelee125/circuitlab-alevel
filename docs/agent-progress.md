@@ -163,12 +163,12 @@ Preset verification: added `tests/experiments.test.ts` (13 tests) covering every
 
 ## Transparent Liquid Glass controls (eighteenth review)
 
-The mobile screenshot showed the light-theme top controls, toolbar and tab dock as flat white cards. The light theme had drifted to near-opaque fills (72 % white on the toolbar, a 94 %/68 % white gradient on the dock) and a 24–46 px blur that averaged the light grid into a solid colour.
+The mobile screenshot showed the light-theme top controls, toolbar and tab dock as flat white cards. The light theme had drifted to near-opaque fills (72 % white on the toolbar, a 94 %/68 % white gradient on the dock) and a 24–46 px blur that averaged the light grid into a solid colour. First pass reduced the fill to 12–16 % + a cool tint with a 2–4 px blur; after the follow-up ("透明度不够，背景改成全透明") the fill was removed entirely.
 
-- Toolbar strips, top-bar action group/language picker, segmented controls and the bottom dock now use a 12–16 % white gradient with a subtle cool tint, a 2–4 px backdrop blur, a white specular top edge and a soft shadow. The grid and circuit remain visible through them (verified in a 3× crop).
-- The tab dock, active segmented pill and toolbar buttons are translucent glass in both themes; the light values are low enough that the canvas grid shows through, while dark text keeps contrast.
-- The light toast is glass too; the canvas hint and zoom pill use the same treatment.
-- The dark theme keeps its existing smoked glass. No layout or hit-area changes; 92 unit / 42 Playwright checks remain green.
+- Every control surface — top-bar mode/language/actions, canvas toolbar strips, segmented containers, bottom tab dock, toast, canvas hint and zoom pill — now has **`background: transparent`** (computed `rgba(0, 0, 0, 0)`), no gradient and no tint.
+- The light theme additionally sets **`backdrop-filter: none`** so the canvas grid and drawing are not hazed; a 0.5 px border, a specular top edge and a soft shadow are the only surfaces. The dark theme keeps a 6 px blur for its smoked glass, still with a transparent fill.
+- Active states use a transparent fill plus an accent ring (segmented/values), an accent top bar (active dock tab) and accent text, so selection is still visible without a solid background.
+- Verified in a 3× crop: the grid lines run continuously through the dock and toolbar. No layout or hit-area changes; 92 unit / 42 Playwright checks remain green.
 
 ## Known limitations
 
