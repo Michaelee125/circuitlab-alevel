@@ -161,6 +161,15 @@ Factual errors found and fixed:
 
 Preset verification: added `tests/experiments.test.ts` (13 tests) covering every preset's status, component count, initial readings, actions, inverse sensor actions, charts, RC time constants and guided questions, plus two internal-resistance reasoning tests. Unit suite: **92 / 92**. All 11 experiments load in the UI, the internal-resistance explanation shows 3.00 → 1.00 Ω, the lamp chart spans −6 V to +6 V, and the full Playwright matrix remains **42 / 42**.
 
+## Transparent Liquid Glass controls (eighteenth review)
+
+The mobile screenshot showed the light-theme top controls, toolbar and tab dock as flat white cards. The light theme had drifted to near-opaque fills (72 % white on the toolbar, a 94 %/68 % white gradient on the dock) and a 24–46 px blur that averaged the light grid into a solid colour.
+
+- Toolbar strips, top-bar action group/language picker, segmented controls and the bottom dock now use a 12–16 % white gradient with a subtle cool tint, a 2–4 px backdrop blur, a white specular top edge and a soft shadow. The grid and circuit remain visible through them (verified in a 3× crop).
+- The tab dock, active segmented pill and toolbar buttons are translucent glass in both themes; the light values are low enough that the canvas grid shows through, while dark text keeps contrast.
+- The light toast is glass too; the canvas hint and zoom pill use the same treatment.
+- The dark theme keeps its existing smoked glass. No layout or hit-area changes; 92 unit / 42 Playwright checks remain green.
+
 ## Known limitations
 
 - RC transients support exactly one capacitor.
