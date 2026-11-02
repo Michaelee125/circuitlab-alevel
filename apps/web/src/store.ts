@@ -136,6 +136,8 @@ interface CircuitState {
   hoverTerminal: { componentId: string; terminalId: string } | null;
   view: ViewportState;
   viewport: { width: number; height: number };
+  /** Screen-space areas covered by floating controls; the fit avoids them. */
+  canvasInsets: { top: number; bottom: number };
   viewMode: ViewMode;
   theme: ThemeMode;
   language: Language;
@@ -183,6 +185,7 @@ interface CircuitState {
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenX: number, screenY: number, factor: number) => void;
   setViewport: (width: number, height: number) => void;
+  setCanvasInsets: (insets: { top: number; bottom: number }) => void;
   fitView: () => void;
   resetView: () => void;
 
@@ -236,6 +239,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   hoverTerminal: null,
   view: { x: 80, y: 80, zoom: 1 },
   viewport: { width: 900, height: 600 },
+  canvasInsets: { top: 0, bottom: 0 },
   viewMode: initialPrefs.viewMode,
   theme: initialPrefs.theme,
   language: initialPrefs.language,
@@ -567,31 +571,42 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       const next = { viewport: { width, height } };
       if (first && width > 0 && height > 0) {
         const bounds = documentBounds(state.doc);
-        const scale = Math.min(width / bounds.width, height / bounds.height, 1.4);
+        const insets = state.canvasInsets;
+        const available = Math.max(1, height - insets.top - insets.bottom);
+        const scale = Math.min(width / bounds.width, available / bounds.height, 1.4);
         const zoom = Math.max(0.3, scale * 0.96);
         return {
           ...next,
           view: {
             zoom,
             x: width / 2 - (bounds.x + bounds.width / 2) * zoom,
-            y: height / 2 - (bounds.y + bounds.height / 2) * zoom,
+            y: insets.top + available / 2 - (bounds.y + bounds.height / 2) * zoom,
           },
         };
       }
       return next;
     }),
 
+  setCanvasInsets: (insets) =>
+    set((state) =>
+      state.canvasInsets.top === insets.top && state.canvasInsets.bottom === insets.bottom
+        ? {}
+        : { canvasInsets: { ...insets } },
+    ),
+
   fitView: () => {
     const state = get();
     const { width, height } = state.viewport;
     if (width <= 1 || height <= 1) return;
     const bounds = documentBounds(state.doc);
-    const zoom = Math.max(0.25, Math.min(width / bounds.width, height / bounds.height, 1.6) * 0.97);
+    const insets = state.canvasInsets;
+    const available = Math.max(1, height - insets.top - insets.bottom);
+    const zoom = Math.max(0.25, Math.min(width / bounds.width, available / bounds.height, 1.6) * 0.97);
     set({
       view: {
         zoom,
         x: width / 2 - (bounds.x + bounds.width / 2) * zoom,
-        y: height / 2 - (bounds.y + bounds.height / 2) * zoom,
+        y: insets.top + available / 2 - (bounds.y + bounds.height / 2) * zoom,
       },
     });
   },

@@ -48,6 +48,7 @@ site.
 | Component distinction | ✅ library offers "Adjustable resistor" (2-wire) and "Sliding rheostat" (3-wire), with separate names, glyphs, terminals and inspectors |
 | Power on value cards | ✅ V / I / R / P rows; source cards show external power and Pr = I²r |
 | Source power breakdown | ✅ inspector + Measurements show external 10.00 W, internal 2.00 W for E = 6 V, r = 0.50 Ω, I = 2 A, with P_EMF = 12.00 W |
+| Mobile floating glass shell | ✅ full-bleed canvas behind the top controls, toolbar and tab dock; measured top/bottom insets keep the fit and value cards clear; e2e asserts the canvas extends behind the dock |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |

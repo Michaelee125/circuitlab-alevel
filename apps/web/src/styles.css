@@ -155,6 +155,9 @@ button {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
 
 kbd {
@@ -2187,31 +2190,32 @@ textarea.input {
     display: none;
   }
   .app-shell {
-    padding-bottom: calc(80px + var(--safe-bottom));
+    padding-bottom: 0;
     background: var(--bg);
   }
   .topbar {
     display: none;
   }
   .mobile-topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     gap: 5px;
     padding: 7px 10px;
     padding-top: calc(7px + var(--safe-top));
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 72%),
-      color-mix(in srgb, var(--bg) 76%, transparent);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
-    backdrop-filter: blur(30px) saturate(180%);
-    border-bottom: 0.5px solid var(--line);
+    background: none;
+    border: 0;
+    pointer-events: none;
     z-index: 20;
     min-height: 52px;
   }
-  .light .mobile-topbar {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.6)),
-      color-mix(in srgb, var(--bg) 82%, transparent);
+  .mobile-topbar .mobile-mode,
+  .mobile-topbar .lang-select,
+  .mobile-topbar .mobile-actions {
+    pointer-events: auto;
   }
   .mobile-topbar .brand-text {
     display: none;
@@ -2223,16 +2227,23 @@ textarea.input {
     flex-shrink: 0;
   }
   .mobile-stage {
-    flex: 1;
-    position: relative;
-    margin: 8px;
-    border-radius: 22px;
-    border: 0.5px solid var(--line);
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
     overflow: hidden;
     background:
       radial-gradient(700px 380px at 50% -10%, rgba(10, 132, 255, 0.08), transparent 65%),
       var(--stage);
-    box-shadow: var(--shadow-panel), var(--inner-light);
+    box-shadow: none;
+    z-index: 0;
+  }
+  .mobile-stage .stage-overlay-top {
+    top: calc(var(--safe-top) + 58px);
+  }
+  .mobile-stage .stage-overlay-bottom {
+    bottom: calc(86px + var(--safe-bottom));
   }
   .mobile-tabbar {
     position: fixed;

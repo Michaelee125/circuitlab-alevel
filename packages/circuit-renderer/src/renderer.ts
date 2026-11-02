@@ -34,6 +34,8 @@ export interface RenderState {
   showValues?: boolean;
   labels?: Record<string, string>;
   reduceMotion?: boolean;
+  /** Screen-space areas covered by floating mobile controls. */
+  contentInsets?: { top: number; bottom: number };
 }
 
 interface Flow {
@@ -579,12 +581,14 @@ export class CircuitRenderer {
         { x: b.x + b.width + gap + 18, y: b.y + b.height + gap + 18 },
         { x: b.x - W - gap - 18, y: b.y - H - gap - 18 },
       ];
-      const topInset = compact ? 8 : 64;
+      const insets = this.state?.contentInsets ?? { top: 0, bottom: 0 };
+      const topInset = Math.max(compact ? 116 : 64, insets.top + 4);
+      const bottomInset = Math.max(compact ? 92 : 10, insets.bottom + 4);
       const inCanvas = (rect: { x: number; y: number; width: number; height: number }) =>
         rect.x >= 8 &&
         rect.y >= topInset &&
         rect.x + rect.width <= this.width - 8 &&
-        rect.y + rect.height <= this.height - 10;
+        rect.y + rect.height <= this.height - bottomInset;
       let chosen: { x: number; y: number } | null = null;
       for (const candidate of candidates) {
         const rect = { ...candidate, width: W, height: H };

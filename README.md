@@ -81,6 +81,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Manual wire adjustment: drag a wire to reshape it, handles on movable segments, reset to automatic | ✅ |
 | Two distinct variable components: 2-terminal adjustable resistor and 3-terminal sliding rheostat with a wiper divider | ✅ |
 | Real-time source power breakdown: terminal/external power and I²r internal power, with the `P_EMF = P_ext + P_r` balance | ✅ |
+| Mobile liquid-glass overlays: the top bar controls, canvas toolbar and bottom dock float over the full-bleed drawing; the fit and value cards measure the real control insets (including safe areas) | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
 | Live V / I / R / P cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch; source cards add external and internal-resistance power | ✅ |
 | Strict card placement: never overlaps components, designators, other cards or wires (hidden if no free spot) | ✅ |

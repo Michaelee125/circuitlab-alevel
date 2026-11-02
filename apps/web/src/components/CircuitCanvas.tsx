@@ -54,6 +54,37 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
 
   const labels = useMemo(() => getDesignators(doc), [doc]);
   const experiment = experimentId ? getExperiment(experimentId) : null;
+  const canvasInsets = useCircuitStore((s) => s.canvasInsets);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // ---- content insets -----------------------------------------------------
+  // The canvas is full-bleed on phones; fit and value cards avoid the real
+  // toolbar and tab-bar geometry (including notch safe areas and wrapping).
+  const applyInsets = useCallback(() => {
+    if (!compact) {
+      useCircuitStore.getState().setCanvasInsets({ top: 0, bottom: 0 });
+      return;
+    }
+    const host = hostRef.current?.getBoundingClientRect();
+    const toolbar = toolbarRef.current?.getBoundingClientRect();
+    const tabbar = document.querySelector('.mobile-tabbar')?.getBoundingClientRect();
+    const top = host && toolbar ? Math.max(0, toolbar.bottom - host.top + 12) : 118;
+    const bottom = host && tabbar ? Math.max(0, host.bottom - tabbar.top + 12) : 96;
+    useCircuitStore.getState().setCanvasInsets({ top, bottom });
+  }, [compact]);
+
+  useEffect(() => {
+    applyInsets();
+    const raf = requestAnimationFrame(applyInsets);
+    window.addEventListener('resize', applyInsets);
+    const observer = toolbarRef.current ? new ResizeObserver(applyInsets) : null;
+    if (observer && toolbarRef.current) observer.observe(toolbarRef.current);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', applyInsets);
+      observer?.disconnect();
+    };
+  }, [applyInsets]);
 
   // ---- renderer lifecycle -------------------------------------------------
   useEffect(() => {
@@ -111,8 +142,9 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       showValues,
       labels,
       reduceMotion: getReducedMotion(),
+      contentInsets: canvasInsets,
     });
-  }, [ready, doc, solution, viewMode, theme, quality, selectionId, selectedWireId, wiringFrom, highlightIds, showGrid, showValues, labels]);
+  }, [ready, doc, solution, viewMode, theme, quality, selectionId, selectedWireId, wiringFrom, highlightIds, showGrid, showValues, labels, canvasInsets]);
 
   useEffect(() => {
     rendererRef.current?.setView(view);
@@ -404,7 +436,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
       <div
         ref={hostRef}
         className="canvas-host"
-        style={{ top: compact ? 64 : 0, bottom: dockOpen ? 346 : 0 }}
+        style={{ top: 0, bottom: compact ? 0 : dockOpen ? 346 : 0 }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -415,7 +447,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
         <canvas ref={canvasRef} />
       </div>
 
-      <div className="stage-overlay-top">
+      <div className="stage-overlay-top" ref={toolbarRef}>
         <div className="tool-strip">
           <Segmented
             value={viewMode}

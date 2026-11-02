@@ -99,6 +99,7 @@ function CircuitDiagnostics() {
   const language = useCircuitStore((s) => s.language);
   const refDoc = useCircuitStore((s) => s.refDoc);
   const view = useCircuitStore((s) => s.view);
+  const canvasInsets = useCircuitStore((s) => s.canvasInsets);
   const selectionId = useCircuitStore((s) => s.selectionId);
   const selectedWireId = useCircuitStore((s) => s.selectedWireId);
   const sheet = useCircuitStore((s) => s.mobileSheet);
@@ -119,6 +120,8 @@ function CircuitDiagnostics() {
       data-has-baseline={refDoc ? 'true' : 'false'}
       data-view-x={view.x}
       data-view-y={view.y}
+      data-inset-top={canvasInsets.top}
+      data-inset-bottom={canvasInsets.bottom}
       data-zoom={view.zoom}
       data-selection={selectionId ?? ''}
       data-selected-wire={selectedWireId ?? ''}

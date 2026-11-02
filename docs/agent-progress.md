@@ -117,6 +117,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Fixed `totalPowerDelivered`/`totalPowerDissipated`: the solver iterated `Object.values` over a Map (always empty), so these totals were reported as 0. They now use `readings.values()`; the tests assert 22 W external and 22 W dissipated for a 12 V, 0.5 Ω source driving 5.5 Ω.
 - Tests: source-power physics test, source-power inspector/measurements e2e and value-card row assertions. 69 unit / 41 Playwright checks.
 
+## Floating mobile glass shell (fourteenth review)
+
+- The mobile stage is now full-bleed: the canvas and grid run edge to edge behind the top controls, the canvas toolbar and the bottom tab dock. The old separate top bar background, stage margin, rounded card and border are gone.
+- The top bar is an absolute overlay with `pointer-events: none`; only the mode switch, language picker and action cluster capture touches, so the drawing can be panned in the gaps. The toolbar and dock remain glass and now blur the live drawing underneath.
+- The fit and the value cards use the measured toolbar/tab-bar geometry (`data-inset-top` / `data-inset-bottom`), including notch safe areas and a wrapping toolbar, instead of fixed 118/96 guesses.
+- E2E asserts the full-bleed canvas extends behind the dock and that the top inset is measured. 69 unit / 41 Playwright checks.
+
 ## Known limitations
 
 - RC transients support exactly one capacitor.

@@ -24,6 +24,17 @@ test.describe('CircuitLab mobile', () => {
     const firstBox = await tabs.first().boundingBox();
     expect(firstBox?.height ?? 0).toBeGreaterThanOrEqual(44);
     await expect(page.locator('.canvas-host canvas').first()).toBeVisible();
+
+    // Full-bleed canvas: the drawing extends behind the floating dock.
+    const hostBox = await page.locator('.canvas-host').first().boundingBox();
+    const tabbarBox = await page.locator('.mobile-tabbar').boundingBox();
+    expect(hostBox).not.toBeNull();
+    expect(tabbarBox).not.toBeNull();
+    expect((hostBox?.y ?? 0) + (hostBox?.height ?? 0)).toBeGreaterThanOrEqual(
+      (tabbarBox?.y ?? 0) + (tabbarBox?.height ?? 0),
+    );
+    const insetTop = Number(await state(page).getAttribute('data-inset-top'));
+    expect(insetTop).toBeGreaterThan(80);
   });
 
   test('adds a component from the sheet and edits it', async ({ page }) => {
