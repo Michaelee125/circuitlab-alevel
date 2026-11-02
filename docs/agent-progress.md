@@ -19,9 +19,9 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
 - Unit/physics/reasoning/teaching/routing/flow tests: **77 passed**
-- Desktop e2e: **20 passed** (`desktop-chromium`, includes the smoke test)
+- Desktop e2e: **21 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **41 passed**, 63 intentionally skipped
+- Total Playwright: **42 passed**, 66 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -130,6 +130,21 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Added one-tap Auto-arrange to the mobile toolbar (it was desktop-only). `autoLayout` now detects a simple source → series chain → return loop and lays it out as one row, with any voltmeters below the element they measure. The same two-row circuit becomes a straight row after the tap.
 - Fixed current-animation direction and magnitude: the solver exposes per-terminal currents (entering positive), and the renderer uses the smaller terminal current, so parallel branches animate with their branch current, ideal voltmeter leads stay still, and the wiper of a sliding rheostat uses its own terminal current. A pure `wireFlow` helper and tests cover series, reversed, parallel, voltmeter and potentiometer cases.
 - Routing tests cover all presets, a tidied two-row circuit, orthogonality and overlaps. 77 unit / 41 Playwright checks.
+
+## Full QA pass (sixteenth review)
+
+Ran the typecheck, the production build, all 77 unit tests and the full 42-check Playwright matrix, then an exploratory pass over desktop and mobile. Found and fixed:
+
+- The experiment panel still said "Ten runnable experiments" although 11 ship; the text now derives from `EXPERIMENTS.length`.
+- At 1024 px the floating toolbar wraps to two rows, but the desktop fit still used the full canvas height, so a large circuit could sit under the toolbar. The toolbar geometry is now measured on desktop as well and fed into the fit and value-card bounds.
+- At 320 px the action strip (auto-arrange/fit) was clipped off the right edge. The toolbar now wraps to a second row below 380 px, and the controls stay inside the viewport.
+- At 320 px the empty-state card overlapped the wrapped toolbar and the tab bar. Short phones get a compact empty card with safe top/bottom padding.
+- In bilingual mode the long toolbar labels forced the action strip past the screen edge (`flex-wrap: nowrap`). The toolbar now wraps whenever needed; the language select label is "EN/中" instead of a truncated "EN + 中".
+- At 1024 px the palette header's "Experiment library" text overlapped the COMPONENTS title. The action collapses to an icon button (with aria-label/title) at ≤1180 px, and the header can wrap.
+
+Exploratory coverage: all 11 experiments auto-arranged; all 13 component kinds added, inspected and deleted; 320/360/375/390/768/900/1024/1280/1920 viewports; light/dark; EN/ZH/bilingual; export JSON, valid import, invalid-JSON toast, share fallback, save/load; short circuit, open switch and two-supply circuits; rotate/undo; sliding-rheostat divider; 320 px experiment/graph/properties/saved/help modals and sheets; console audit (only headless WebGL driver performance warnings).
+
+Result after fixes: **77 unit / 42 Playwright checks**, no page errors, no horizontal overflow at any tested width.
 
 ## Known limitations
 

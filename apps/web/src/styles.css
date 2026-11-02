@@ -486,6 +486,20 @@ kbd {
   pointer-events: auto;
 }
 
+.stage-overlay-top > .tool-strip:last-child {
+  margin-left: auto;
+}
+
+.palette-panel .panel-head {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1180px) {
+  .palette-experiments-label {
+    display: none;
+  }
+}
+
 .stage-overlay-bottom {
   position: absolute;
   bottom: 12px;
@@ -2242,6 +2256,37 @@ textarea.input {
   .mobile-stage .stage-overlay-top {
     top: calc(var(--safe-top) + 58px);
   }
+  @media (max-width: 380px) {
+    .mobile-stage .stage-overlay-top {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+    .mobile-stage .stage-overlay-top > .toolbar-spacer {
+      display: none;
+    }
+    .mobile-stage .stage-overlay-top > .tool-strip:last-child {
+      margin-left: auto;
+    }
+  }
+  @media (max-width: 380px), (max-height: 640px) {
+    .mobile-stage .canvas-empty {
+      padding-top: calc(var(--safe-top) + 150px);
+      padding-bottom: calc(80px + var(--safe-bottom));
+    }
+    .mobile-stage .canvas-empty-card {
+      padding: 18px 20px;
+      border-radius: 20px;
+    }
+    .mobile-stage .canvas-empty-card h3 {
+      margin: 8px 0 4px;
+      font-size: 17px;
+    }
+    .mobile-stage .canvas-empty-card p {
+      margin-bottom: 12px;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+  }
   .mobile-stage .stage-overlay-bottom {
     bottom: calc(86px + var(--safe-bottom));
   }
@@ -2370,7 +2415,7 @@ textarea.input {
     background: var(--accent-soft);
   }
   .stage-overlay-top {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     overflow: visible;
     gap: 6px;
     padding: 8px 9px 0;

@@ -62,7 +62,7 @@ export function LanguagePicker({ compact = false }: { compact?: boolean }) {
       >
         <option value="en">English</option>
         <option value="zh">中文</option>
-        <option value="bilingual">EN + 中文</option>
+        <option value="bilingual">EN/中</option>
       </select>
     );
   }

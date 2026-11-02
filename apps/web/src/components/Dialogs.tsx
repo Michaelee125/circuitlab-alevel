@@ -321,8 +321,8 @@ export function ExperimentPanel() {
         <div className="panel-body">
           <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 10 }}>
             {language === 'zh'
-              ? '10 个可运行实验：从串联、并联到 LDR、内阻和电容充放电。'
-              : 'Ten runnable experiments, from series circuits to LDRs, internal resistance and RC transients.'}
+              ? `${EXPERIMENTS.length} 个可运行实验：从串联、并联到 LDR、内阻和电容充放电。`
+              : `${EXPERIMENTS.length} runnable experiments, from series circuits to LDRs, internal resistance and RC transients.`}
           </div>
           <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setSheet('experiments')}>
             <Icon name="play" size={14} />

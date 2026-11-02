@@ -47,6 +47,7 @@ test.describe('CircuitLab desktop', () => {
   });
 
   test('solves the LDR series circuit and explains the light change', async ({ page }) => {
+    await expect(page.getByText('11 runnable experiments')).toBeVisible();
     await loadExperiment(page, 'LDR circuit');
     const s = state(page);
     await expect(s).toHaveAttribute('data-components', '5');
@@ -249,6 +250,18 @@ test.describe('CircuitLab desktop', () => {
     expect(glass).toContain('blur');
     await page.keyboard.press('Escape');
     await expect(settings).toHaveCount(0);
+  });
+
+  test('keeps the component library header readable on a narrow desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.waitForTimeout(500);
+    const title = await page.locator('.palette-panel .panel-title').boundingBox();
+    const action = await page.locator('.palette-panel .panel-actions button').boundingBox();
+    expect(title).not.toBeNull();
+    expect(action).not.toBeNull();
+    expect(title!.x + title!.width).toBeLessThanOrEqual(action!.x - 2);
+    await page.locator('.palette-panel .panel-actions button').click();
+    await expect(page.locator('.compare-card').first()).toBeVisible();
   });
 
   test('switches between the light and dark glass themes', async ({ page }) => {

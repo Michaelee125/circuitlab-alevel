@@ -35,6 +35,40 @@ test.describe('CircuitLab mobile', () => {
     );
     const insetTop = Number(await state(page).getAttribute('data-inset-top'));
     expect(insetTop).toBeGreaterThan(80);
+
+    // Extra-small phones: every toolbar control must stay inside the screen.
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.waitForTimeout(500);
+    const toolbarButtons = page.locator('.stage-overlay-top button');
+    const count = await toolbarButtons.count();
+    expect(count).toBeGreaterThan(4);
+    for (let i = 0; i < count; i += 1) {
+      const box = await toolbarButtons.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(320.5);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(568);
+    }
+    const topbarButtons = page.locator('.mobile-topbar button, .mobile-topbar select');
+    const topbarCount = await topbarButtons.count();
+    for (let i = 0; i < topbarCount; i += 1) {
+      const box = await topbarButtons.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(320.5);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+    // Bilingual labels are longest; the toolbar must still wrap inside 320.
+    await page.locator('.lang-select').selectOption('bilingual');
+    await page.waitForTimeout(500);
+    const bilingualButtons = page.locator('.stage-overlay-top button');
+    const bilingualCount = await bilingualButtons.count();
+    for (let i = 0; i < bilingualCount; i += 1) {
+      const box = await bilingualButtons.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(320.5);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   });
 
   test('adds a component from the sheet and edits it', async ({ page }) => {
@@ -96,6 +130,19 @@ test.describe('CircuitLab mobile', () => {
     await page.locator('.lang-select').selectOption('zh');
     await expect(state(page)).toHaveAttribute('data-language', 'zh');
     await expect(page.locator('.mobile-tab').first()).toContainText('元件库');
+    await page.locator('.lang-select').selectOption('bilingual');
+    await expect(state(page)).toHaveAttribute('data-language', 'bilingual');
+    const viewport = page.viewportSize();
+    const toolbarButtons = page.locator('.stage-overlay-top button');
+    const count = await toolbarButtons.count();
+    for (let i = 0; i < count; i += 1) {
+      const box = await toolbarButtons.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x + box!.width).toBeLessThanOrEqual((viewport?.width ?? 390) + 0.5);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport?.width ?? 390,
+    );
   });
 
   test('opens the graph sheet with a real chart', async ({ page }) => {

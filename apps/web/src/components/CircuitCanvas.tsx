@@ -61,15 +61,12 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
   // The canvas is full-bleed on phones; fit and value cards avoid the real
   // toolbar and tab-bar geometry (including notch safe areas and wrapping).
   const applyInsets = useCallback(() => {
-    if (!compact) {
-      useCircuitStore.getState().setCanvasInsets({ top: 0, bottom: 0 });
-      return;
-    }
     const host = hostRef.current?.getBoundingClientRect();
     const toolbar = toolbarRef.current?.getBoundingClientRect();
     const tabbar = document.querySelector('.mobile-tabbar')?.getBoundingClientRect();
-    const top = host && toolbar ? Math.max(0, toolbar.bottom - host.top + 12) : 118;
-    const bottom = host && tabbar ? Math.max(0, host.bottom - tabbar.top + 12) : 96;
+    const top = host && toolbar ? Math.max(0, toolbar.bottom - host.top + 12) : compact ? 118 : 0;
+    const bottom =
+      compact && host && tabbar ? Math.max(0, host.bottom - tabbar.top + 12) : 0;
     useCircuitStore.getState().setCanvasInsets({ top, bottom });
   }, [compact]);
 
@@ -473,7 +470,7 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
           </Button>
         </div>
 
-        <div style={{ flex: 1 }} />
+        <div className="toolbar-spacer" style={{ flex: 1 }} />
 
         <div className="tool-strip">
           <IconButton

@@ -164,8 +164,16 @@ export function Palette({ bare = false }: { bare?: boolean }) {
       title={t(language, 'panel.components')}
       icon="circuit"
       actions={
-        <button className="btn btn-ghost btn-sm" onClick={openExperiments}>
-          <span style={{ fontSize: 10.5 }}>{t(language, 'experiments.library')}</span>
+        <button
+          className="btn btn-ghost btn-sm palette-experiments"
+          onClick={openExperiments}
+          aria-label={t(language, 'experiments.library')}
+          title={t(language, 'experiments.library')}
+        >
+          <Icon name="flask" size={13} />
+          <span className="palette-experiments-label" style={{ fontSize: 10.5 }}>
+            {t(language, 'experiments.library')}
+          </span>
         </button>
       }
       className="palette-panel"

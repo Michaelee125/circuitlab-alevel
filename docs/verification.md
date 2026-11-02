@@ -52,6 +52,8 @@ site.
 | Clean auto-routing | ✅ port-flexible candidates, component interiors rejected, overlap/crossing scoring; all 11 presets and a tidied two-row circuit checked for no component cuts |
 | Tidy layout | ✅ series source→chain→return loop collapses to one row with shunt voltmeters below; asserted by unit tests and the mobile Auto-arrange button |
 | Current direction | ✅ terminal-current driven; series loop, reversed wire, parallel branch current, ideal-voltmeter lead and potentiometer wiper cases tested |
+| Responsive controls | ✅ 320 px toolbar wraps into two rows, 1024 px palette header collapses the Experiment library action to an icon, desktop fit now measures the floating toolbar height; 320 px and bilingual checks are in the mobile e2e |
+| File workflows | ✅ export JSON, valid import, invalid-JSON toast, share fallback, save/load and IndexedDB reload exercised during the QA pass |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |
@@ -85,11 +87,11 @@ site.
 | Suite | Result |
 | --- | --- |
 | Vitest (physics, transients, reasoning, teaching, routing, flow) | 77 / 77 passed |
-| Playwright desktop project | 20 / 20 passed |
+| Playwright desktop project | 21 / 21 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 41 passed, 63 intentionally skipped (viewport-specific) |
+| Total e2e | 42 passed, 66 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 
