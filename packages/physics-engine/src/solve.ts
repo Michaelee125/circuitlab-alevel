@@ -62,6 +62,7 @@ export interface CircuitSolution {
   iterations: number;
   sourceIds: string[];
   totalCurrent: number | null;
+  /** External equivalent resistance V_terminal / I (excludes the source's internal resistance). */
   totalResistance: number | null;
   totalPowerDelivered: number;
   totalPowerDissipated: number;
@@ -307,7 +308,7 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
         internalIndex: extraIndex,
         deliveredCurrent: 0,
         terminalVoltage: 0,
-        emf: options.zeroSources ? 0 : Math.max(0, comp.params.emf ?? 0),
+        emf: options.zeroSources ? 0 : comp.params.emf ?? 0,
         internalResistance,
       });
     }

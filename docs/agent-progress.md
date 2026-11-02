@@ -18,7 +18,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing/flow tests: **77 passed**
+- Unit/physics/reasoning/teaching/routing/flow/experiments tests: **92 passed**
 - Desktop e2e: **21 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
 - Total Playwright: **42 passed**, 66 intentionally skipped
@@ -145,6 +145,21 @@ Ran the typecheck, the production build, all 77 unit tests and the full 42-check
 Exploratory coverage: all 11 experiments auto-arranged; all 13 component kinds added, inspected and deleted; 320/360/375/390/768/900/1024/1280/1920 viewports; light/dark; EN/ZH/bilingual; export JSON, valid import, invalid-JSON toast, share fallback, save/load; short circuit, open switch and two-supply circuits; rotate/undo; sliding-rheostat divider; 320 px experiment/graph/properties/saved/help modals and sheets; console audit (only headless WebGL driver performance warnings).
 
 Result after fixes: **77 unit / 42 Playwright checks**, no page errors, no horizontal overflow at any tested width.
+
+## Theory and preset audit (seventeenth review)
+
+Read every experiment definition, instruction, action, chart and reasoning rule, then exercised the theory numerically against the solver and in the UI.
+
+Factual errors found and fixed:
+
+- **Lamp I–V sweep had no negative half.** The sweep goes from −6 V to +6 V, but the solver clipped the source EMF to ≥ 0, so every negative point was 0 V / 0 A and the plotted characteristic was flat on the left. Negative EMF is now allowed (the UI still limits a user-set cell to ≥ 0); the chart shows the true odd non-ohmic curve, and a test checks the negative/positive symmetry and the rising filament resistance.
+- **Internal-resistance explanation omitted r from the "total resistance".** The general rule used the external equivalent (2.50 Ω) and called it total while the current values used 3.00 Ω. The total-resistance step/quantity now adds the source internal resistance and says so explicitly (3.00 → 1.00 Ω = external 2.50 → 0.500 Ω + internal 0.500 Ω), including in the guided question.
+- **Falling EMF was described as "because the EMF is larger".** The cause text is now direction-aware ("smaller" / "larger").
+- **Rules that assume an ideal source are now guarded.** The source-EMF series rule (and the already-guarded resistor/sensor rules) fall back to the general rule when the source has internal resistance, so they no longer claim that the external p.d.s sum to the EMF or that the total resistance is the external value. A test covers an EMF change and an LDR change with r = 0.5 Ω.
+- **UI label.** `Total resistance` is now **External resistance** (外电路电阻) because the value is `V_terminal / I`; the reasoning/Compare total remains the circuit total including r.
+- **Parallel instruction.** The voltmeter is across R1, so the instruction now says to watch R1's p.d. stay at the supply value (and notes R2 also has 6 V) instead of telling the student to observe R2 with a meter that is not across it.
+
+Preset verification: added `tests/experiments.test.ts` (13 tests) covering every preset's status, component count, initial readings, actions, inverse sensor actions, charts, RC time constants and guided questions, plus two internal-resistance reasoning tests. Unit suite: **92 / 92**. All 11 experiments load in the UI, the internal-resistance explanation shows 3.00 → 1.00 Ω, the lamp chart spans −6 V to +6 V, and the full Playwright matrix remains **42 / 42**.
 
 ## Known limitations
 

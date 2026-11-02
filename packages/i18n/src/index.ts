@@ -110,7 +110,7 @@ const D: Record<string, Entry> = {
   'measure.voltage': ['p.d.', '电压'],
   'measure.power': ['Power', '功率'],
   'measure.resistance': ['Resistance', '电阻'],
-  'measure.totalR': ['Total resistance', '总电阻'],
+  'measure.totalR': ['External resistance', '外电路电阻'],
   'measure.totalI': ['Supply current', '电源电流'],
   'measure.externalPower': ['External power', '外电路功率'],
   'measure.internalPower': ['Internal power', '内阻功率'],

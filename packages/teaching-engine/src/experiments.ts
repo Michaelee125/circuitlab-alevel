@@ -422,12 +422,12 @@ export const EXPERIMENTS: Experiment[] = [
       en: [
         'Both branches are connected directly across the 6 V supply.',
         'The ammeter in the main branch reads the sum of the branch currents.',
-        'Change R1 and observe that the p.d. across R2 does not change.',
+        'Change R1 and observe that its p.d. stays at the full supply p.d. (R2 also has 6 V), while the main current changes.',
       ],
       zh: [
         '两条支路都直接并联在 6 V 电源两端。',
         '干路电流表读数为各支路电流之和。',
-        '改变 R1，观察 R2 两端电压保持不变。',
+        '改变 R1，观察 R1 两端电压保持电源电压不变（R2 两端电压也保持 6 V），而干路电流改变。',
       ],
     },
     actions: [

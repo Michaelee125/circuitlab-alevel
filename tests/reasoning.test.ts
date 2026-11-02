@@ -441,6 +441,53 @@ describe('general reasoning coverage', () => {
     expect(ids).toContain('wiper-output');
   });
 
+  it('uses the general rule and includes r for an EMF change with internal resistance', () => {
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 6, internalResistance: 0.5 } },
+        { kind: 'resistor', params: { resistance: 4 } },
+        { kind: 'resistor', params: { resistance: 8 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'Series with internal resistance',
+    );
+    const after = withParam(before, 0, { emf: 12 });
+    const result = explainPair(before, after);
+    expect(result.ruleId).toBe('network-source-emf');
+    expect(result.changes['total:R']?.before).toBeCloseTo(12.5, 2);
+    expect(result.changes['total:R']?.after).toBeCloseTo(12.5, 2);
+    expect(result.answer.en).toContain('because the EMF is larger');
+  });
+
+  it('does not claim the EMF is shared when a sensor circuit has internal resistance', () => {
+    const base = { referenceResistance: 100, gamma: 0.7 };
+    const before = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 12, internalResistance: 0.5 } },
+        { kind: 'ldr', params: { ...base, illuminance: ldrIlluminanceForResistance(8, base) } },
+        { kind: 'resistor', params: { resistance: 4 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 2, 'a'],
+        [2, 'b', 0, 'neg'],
+      ],
+      'LDR with internal resistance',
+    );
+    const after = withParam(before, 1, { illuminance: ldrIlluminanceForResistance(2, base) });
+    const result = explainPair(before, after);
+    expect(result.supported).toBe(true);
+    expect(result.ruleId).not.toBe('sensor-series-light');
+    const total = result.steps.find((step) => step.id === 'total-resistance');
+    expect(total?.en).toContain('12.5');
+    expect(total?.en).toContain('6.5');
+    expect(result.answer.en).not.toContain('EMF is shared');
+  });
+
   it('explains a capacitance change as a transient effect only', () => {
     const before = buildDoc(
       [

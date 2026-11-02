@@ -55,6 +55,14 @@ All SI (V, A, Ω, F, W, s). Numbers are checked with `toBeCloseTo(…, 3)` or
 | voltmeter | ideal-ish `1 GΩ` | parallel |
 | capacitor | open at DC | transient handled separately |
 
+**External vs total resistance.** `CircuitSolution.totalResistance` is the
+external equivalent, `V_terminal / I`; it deliberately excludes the source's
+internal resistance. The UI labels it **External resistance**. The reasoning
+and Compare total (`total:R`) add the source's `r`, so the internal-resistance
+example reports 3.00 Ω → 1.00 Ω when the rheostat goes from 2.50 Ω to 0.50 Ω.
+The IV sweep uses a negative EMF for the reverse half; the solver does not clip
+a negative source EMF.
+
 **Ideal meter note.** A literal 0 Ω ammeter or ∞ Ω voltmeter makes the MNA
 matrix singular or ill-conditioned. `1 µΩ` and `1 GΩ` are used instead; the
 error is below one part in 10⁶ for teaching circuits and the UI rounds

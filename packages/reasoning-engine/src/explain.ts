@@ -108,11 +108,17 @@ function collectChanges(input: ExplainInput): Record<string, QuantityChange> {
     }
   }
   if (input.beforeSolution.totalResistance !== null && input.afterSolution.totalResistance !== null) {
+    // `totalResistance` is the external equivalent (terminal p.d./current).
+    // The circuit total also includes the source's internal resistance.
+    const sourceBefore = input.before.components.find((comp) => isSourceKind(comp.kind));
+    const sourceAfter = input.after.components.find((comp) => isSourceKind(comp.kind));
+    const internalBefore = sourceBefore?.params.internalResistance ?? 0;
+    const internalAfter = sourceAfter?.params.internalResistance ?? 0;
     quantityChange(
       changes,
       'total:R',
-      input.beforeSolution.totalResistance,
-      input.afterSolution.totalResistance,
+      input.beforeSolution.totalResistance + internalBefore,
+      input.afterSolution.totalResistance + internalAfter,
       'Ω',
     );
   }
@@ -707,6 +713,7 @@ function explainSourceChange(
   source: ComponentInstance,
   changes: Record<string, QuantityChange>,
 ): ExplainResult | null {
+  if (!isIdealSource(ctx.before) || !isIdealSource(ctx.after)) return null;
   const net = ctx.net;
   if (net.components.length !== 3) return null;
   const resistors = net.components.filter(isFixedResistor);
@@ -1083,18 +1090,21 @@ function explainGeneralChange(
       [source.id],
     );
   } else if (!isSourceChange && finitePair(rtB, rtA)) {
+    const totalB = (rtB as number) + rIntB;
+    const totalA = (rtA as number) + rIntA;
+    const dTotal = direction(totalB, totalA, 1e-4);
     push(
       'total-resistance',
-      dRext === 'unchanged' ? 'law' : 'consequence',
+      dTotal === 'unchanged' ? 'law' : 'consequence',
       'series-resistance',
-      dRext === 'unchanged'
-        ? `The total resistance stays at ${fmt(rtA as number)} Ω.`
-        : `The total resistance of the circuit ${RISE_EN[dRext]} from ${fmt(rtB as number)} Ω to ${fmt(rtA as number)} Ω.`,
-      dRext === 'unchanged'
-        ? `总电阻保持 ${fmt(rtA as number)} Ω 不变。`
-        : `电路总电阻由 ${fmt(rtB as number)} Ω ${RISE_ZH[dRext]}到 ${fmt(rtA as number)} Ω。`,
+      dTotal === 'unchanged'
+        ? `The total resistance stays at ${fmt(totalA)} Ω (external ${fmt(rtA as number)} Ω + internal ${fmt(rIntA)} Ω).`
+        : `The total resistance of the circuit ${RISE_EN[dTotal]} from ${fmt(totalB)} Ω to ${fmt(totalA)} Ω (external ${fmt(rtB as number)} → ${fmt(rtA as number)} Ω + internal ${fmt(rIntB)} → ${fmt(rIntA)} Ω).`,
+      dTotal === 'unchanged'
+        ? `总电阻保持 ${fmt(totalA)} Ω 不变（外电路 ${fmt(rtA as number)} Ω + 内阻 ${fmt(rIntA)} Ω）。`
+        : `电路总电阻由 ${fmt(totalB)} Ω ${RISE_ZH[dTotal]}到 ${fmt(totalA)} Ω（外电路 ${fmt(rtB as number)} → ${fmt(rtA as number)} Ω + 内阻 ${fmt(rIntB)} → ${fmt(rIntA)} Ω）。`,
       [changed.id, source.id],
-      finitePair(rtB, rtA) ? { 'total:R': { before: rtB as number, after: rtA as number, delta: (rtA as number) - (rtB as number), direction: dRext, unit: 'Ω' } } : undefined,
+      { 'total:R': { before: totalB, after: totalA, delta: totalA - totalB, direction: dTotal, unit: 'Ω' } },
     );
   }
 
@@ -1112,8 +1122,8 @@ function explainGeneralChange(
     let reasonEn = 'because I = EMF / R_total with the EMF constant';
     let reasonZh = '因为电动势不变，I = E / R总';
     if (change.key === 'emf') {
-      reasonEn = 'because the EMF is larger';
-      reasonZh = '因为电动势增大';
+      reasonEn = `because the EMF is ${dEmf === 'increase' ? 'larger' : 'smaller'}`;
+      reasonZh = `因为电动势${dEmf === 'increase' ? '增大' : '减小'}`;
     } else if (change.key === 'internalResistance') {
       reasonEn = 'because the lost volts I·r change';
       reasonZh = '因为内阻上的损失电压 I·r 改变';

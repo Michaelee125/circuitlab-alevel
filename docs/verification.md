@@ -54,6 +54,8 @@ site.
 | Current direction | ✅ terminal-current driven; series loop, reversed wire, parallel branch current, ideal-voltmeter lead and potentiometer wiper cases tested |
 | Responsive controls | ✅ 320 px toolbar wraps into two rows, 1024 px palette header collapses the Experiment library action to an icon, desktop fit now measures the floating toolbar height; 320 px and bilingual checks are in the mobile e2e |
 | File workflows | ✅ export JSON, valid import, invalid-JSON toast, share fallback, save/load and IndexedDB reload exercised during the QA pass |
+| Preset theory audit | ✅ all 11 experiments: expected statuses, textbook initial readings, every effective action, inverse sensor actions, full negative lamp I–V sweep, internal-resistance gradient −0.500 Ω / intercept 6.000 V, RC τ = 4.70 s and 63 %/37 % points |
+| Explanation facts | ✅ internal-resistance total includes the 0.500 Ω source resistance (3.00 → 1.00 Ω), falling EMF reads "smaller", non-ideal source rules fall back to the general rule, and guided answers come from the verified directions |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |
@@ -86,7 +88,7 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing, flow) | 77 / 77 passed |
+| Vitest (physics, transients, reasoning, teaching, routing, flow, experiments) | 92 / 92 passed |
 | Playwright desktop project | 21 / 21 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
