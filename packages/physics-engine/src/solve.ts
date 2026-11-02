@@ -755,7 +755,7 @@ export function solveCircuit(doc: CircuitDocument, options: SolveOptions = {}): 
       totalResistance = Number.POSITIVE_INFINITY;
     }
   }
-  for (const reading of Object.values(readings)) {
+  for (const reading of readings.values()) {
     if (reading.kind === 'cell' || reading.kind === 'battery') {
       totalPowerDelivered += reading.deliveredPower ?? 0;
     } else {

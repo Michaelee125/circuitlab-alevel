@@ -472,9 +472,8 @@ export class CircuitRenderer {
     // Narrow canvases (phones) get compact cards so several can sit side by side.
     const compact = this.width < 560;
     const W = compact ? 80 : 110;
-    const H = compact ? 44 : 54;
-    const GAP = 12;
     const toScreen = (p: Point) => ({ x: p.x * zoom + this.view.x, y: p.y * zoom + this.view.y });
+    const chipHeight = () => (compact ? 48 : 66);
 
     const screenBounds = state.doc.components.map((comp) => {
       const b = componentBounds(comp);
@@ -523,11 +522,13 @@ export class CircuitRenderer {
       a.y < b.y + b.height + pad &&
       a.y + a.height + pad > b.y;
 
+    type ChipRow = { key: string; text: string; tone: 'v' | 'i' | 'r' | 'p' | 'pr' };
     const placements: {
       id: string;
       chosen: { x: number; y: number };
       focus: Point;
-      rows: { key: string; text: string; tone: 'v' | 'i' | 'r' }[];
+      height: number;
+      rows: ChipRow[];
     }[] = [];
 
     const ordered = [...state.doc.components].sort((a, b) => a.y - b.y || a.x - b.x);
@@ -535,6 +536,29 @@ export class CircuitRenderer {
       if (comp.kind === 'ammeter' || comp.kind === 'voltmeter') continue;
       const reading = state.solution.components[comp.id];
       if (!reading || !reading.valid) continue;
+      const isSource = comp.kind === 'cell' || comp.kind === 'battery';
+      const resistance =
+        reading.resistance !== null && Number.isFinite(reading.resistance)
+          ? formatQuantity(reading.resistance, 'resistance')
+          : '—';
+      const externalPower = isSource
+        ? Math.abs(reading.deliveredPower ?? 0)
+        : Math.abs(reading.power);
+      const rows: ChipRow[] = [
+        { key: 'V', text: formatQuantity(reading.voltageMagnitude, 'voltage'), tone: 'v' },
+        { key: 'I', text: formatQuantity(reading.currentMagnitude, 'current'), tone: 'i' },
+        isSource
+          ? { key: 'P', text: formatQuantity(externalPower, 'power'), tone: 'p' }
+          : { key: 'R', text: resistance, tone: 'r' },
+        isSource
+          ? {
+              key: 'Pr',
+              text: formatQuantity(Math.abs(reading.internalPower ?? 0), 'power'),
+              tone: 'pr',
+            }
+          : { key: 'P', text: formatQuantity(externalPower, 'power'), tone: 'p' },
+      ];
+      const H = chipHeight();
       const index = state.doc.components.indexOf(comp);
       const b = screenBounds[index];
       const focus = toScreen({ x: comp.x, y: comp.y });
@@ -548,6 +572,12 @@ export class CircuitRenderer {
         { x: b.x + b.width + gap + 22, y: b.y - H - gap },
         { x: b.x - W - gap - 22, y: b.y + b.height + gap },
         { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + gap + 46 },
+        { x: b.x + b.width / 2 - W / 2, y: b.y - H - gap - 52 },
+        { x: b.x + b.width / 2 - W / 2, y: b.y + b.height + gap + 74 },
+        { x: b.x + b.width + gap + 46, y: b.y + b.height / 2 - H / 2 },
+        { x: b.x - W - gap - 46, y: b.y + b.height / 2 - H / 2 },
+        { x: b.x + b.width + gap + 18, y: b.y + b.height + gap + 18 },
+        { x: b.x - W - gap - 18, y: b.y - H - gap - 18 },
       ];
       const topInset = compact ? 8 : 64;
       const inCanvas = (rect: { x: number; y: number; width: number; height: number }) =>
@@ -566,29 +596,13 @@ export class CircuitRenderer {
       }
       if (!chosen) continue;
       occupied.push({ ...chosen, width: W, height: H });
-
-      const isSource = comp.kind === 'cell' || comp.kind === 'battery';
-      const resistance =
-        reading.resistance !== null && Number.isFinite(reading.resistance)
-          ? formatQuantity(reading.resistance, 'resistance')
-          : '—';
-      placements.push({
-        id: comp.id,
-        chosen,
-        focus,
-        rows: [
-          { key: 'V', text: formatQuantity(reading.voltageMagnitude, 'voltage'), tone: 'v' },
-          { key: 'I', text: formatQuantity(reading.currentMagnitude, 'current'), tone: 'i' },
-          isSource
-            ? { key: 'r', text: `${(comp.params.internalResistance ?? 0).toFixed(2)} Ω`, tone: 'r' }
-            : { key: 'R', text: resistance, tone: 'r' },
-        ],
-      });
+      placements.push({ id: comp.id, chosen, focus, height: H, rows });
     }
 
     const keep = new Set<string>();
     for (const placement of placements) {
       keep.add(placement.id);
+      const H = placement.height;
       let entry = this.chipElements.get(placement.id);
       if (!entry) {
         const root = document.createElement('div');
@@ -598,11 +612,17 @@ export class CircuitRenderer {
           root.appendChild(span);
           return span;
         });
-        const chipClass = `value-chip${compact ? ' is-compact' : ''}`;
-        root.className = chipClass;
+        root.className = `value-chip${compact ? ' is-compact' : ''}`;
         layer.appendChild(root);
         entry = { root, rows, content: '' };
         this.chipElements.set(placement.id, entry);
+      }
+      // The card can grow when the source needs a Pr row.
+      while (entry.rows.length < placement.rows.length) {
+        const span = document.createElement('span');
+        span.className = 'value-row';
+        entry.root.appendChild(span);
+        entry.rows.push(span);
       }
       entry.root.className = `value-chip${compact ? ' is-compact' : ''}`;
       const content = placement.rows.map((row) => `${row.key}|${row.tone}|${row.text}`).join('|');
@@ -613,6 +633,9 @@ export class CircuitRenderer {
           span.className = `value-row row-${row.tone}`;
           span.innerHTML = `<span class="value-key">${row.key}</span><span class="value-value">${row.text}</span>`;
         });
+        for (let i = placement.rows.length; i < entry.rows.length; i += 1) {
+          entry.rows[i].style.display = 'none';
+        }
       }
       entry.root.style.left = `${placement.chosen.x}px`;
       entry.root.style.top = `${placement.chosen.y}px`;

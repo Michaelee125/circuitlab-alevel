@@ -46,6 +46,8 @@ site.
 | Manual wire routes | ✅ drag a wire segment or offset a straight wire, endpoints stay attached and orthogonal; reset to automatic; survives JSON round-trip |
 | Three-terminal rheostat | ✅ potential-divider output `V_WB = (R_WB/R_total)·V_AB` verified (wiper 25 % ⇒ 3.00 V), two-wire A–W and full-track modes tested |
 | Component distinction | ✅ library offers "Adjustable resistor" (2-wire) and "Sliding rheostat" (3-wire), with separate names, glyphs, terminals and inspectors |
+| Power on value cards | ✅ V / I / R / P rows; source cards show external power and Pr = I²r |
+| Source power breakdown | ✅ inspector + Measurements show external 10.00 W, internal 2.00 W for E = 6 V, r = 0.50 Ω, I = 2 A, with P_EMF = 12.00 W |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
 | Phone value cards | ✅ 80 × 44 compact cards fit three in a row; desktop keeps the larger cards |
@@ -78,12 +80,12 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing) | 68 / 68 passed |
-| Playwright desktop project | 19 / 19 passed |
+| Vitest (physics, transients, reasoning, teaching, routing) | 69 / 69 passed |
+| Playwright desktop project | 20 / 20 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 40 passed, 60 intentionally skipped (viewport-specific) |
+| Total e2e | 41 passed, 63 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

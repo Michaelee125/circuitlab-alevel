@@ -397,6 +397,30 @@ describe('LDR and thermistor models', () => {
 });
 
 
+describe('source power', () => {
+  it('separates external and internal resistance power', () => {
+    const doc = buildDoc(
+      [
+        { kind: 'cell', params: { emf: 12, internalResistance: 0.5 } },
+        { kind: 'resistor', params: { resistance: 5.5 } },
+      ],
+      [
+        [0, 'pos', 1, 'a'],
+        [1, 'b', 0, 'neg'],
+      ],
+    );
+    const solution = solveCircuit(doc);
+    const source = solution.components[compId(doc, 0)];
+    expect(source.currentMagnitude).toBeCloseTo(2, 6);
+    expect(source.terminalVoltage).toBeCloseTo(11, 6);
+    expect(source.deliveredPower).toBeCloseTo(22, 6);
+    expect(source.internalPower).toBeCloseTo(2, 6);
+    expect(solution.totalPowerDelivered).toBeCloseTo(22, 6);
+    expect(solution.totalPowerDissipated).toBeCloseTo(22, 6);
+    expect((source.deliveredPower ?? 0) + (source.internalPower ?? 0)).toBeCloseTo(24, 6);
+  });
+});
+
 describe('three-terminal sliding rheostat', () => {
   const divider = (wiper: number) =>
     buildDoc(

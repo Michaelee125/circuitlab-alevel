@@ -40,6 +40,9 @@ circuit — not from keyword matching.
 | Manual wire adjustment | Three-terminal sliding rheostat |
 | --- | --- |
 | ![A wire dragged into a manual route with handles and reset control](docs/images/manual-wire.png) | ![Sliding rheostat used as a potential divider](docs/images/potentiometer-divider.png) |
+| Source power breakdown | |
+| --- | --- |
+| ![Source parameter cards showing external and internal-resistance power, with the inspector breakdown](docs/images/source-powers.png) | |
 
 ## Why this is not just an animation
 
@@ -77,8 +80,9 @@ stays at the supply voltage and only the LDR branch current changes.
 | Redundant-wire prevention, parallel lane routing, selectable/deletable wires | ✅ |
 | Manual wire adjustment: drag a wire to reshape it, handles on movable segments, reset to automatic | ✅ |
 | Two distinct variable components: 2-terminal adjustable resistor and 3-terminal sliding rheostat with a wiper divider | ✅ |
+| Real-time source power breakdown: terminal/external power and I²r internal power, with the `P_EMF = P_ext + P_r` balance | ✅ |
 | Apple-style Liquid Glass UI, pure-black dark theme, full light theme | ✅ |
-| Live V / I / R cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch | ✅ |
+| Live V / I / R / P cards in real Liquid Glass (DOM + backdrop blur), toggled by a labelled **Values** switch; source cards add external and internal-resistance power | ✅ |
 | Strict card placement: never overlaps components, designators, other cards or wires (hidden if no free spot) | ✅ |
 | Meter readings auto-fit their screen and are kept clear of return wires | ✅ |
 | Animated feedback: lamp glow scales with power, glowing comet-style current particles, value-change pulses | ✅ |

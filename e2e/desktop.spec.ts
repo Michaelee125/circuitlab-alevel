@@ -241,7 +241,11 @@ test.describe('CircuitLab desktop', () => {
     await expect(state(page)).toHaveAttribute('data-show-values', 'true');
     await expect(page.getByRole('button', { name: 'Show values' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.value-chip')).toHaveCount(3);
-    const glass = await page.locator('.value-chip').first().evaluate((el) => getComputedStyle(el).backdropFilter);
+    const firstChip = page.locator('.value-chip').first();
+    await expect(firstChip.locator('.value-row')).toHaveCount(4);
+    await expect(firstChip).toContainText('Pr');
+    await expect(firstChip).toContainText('P');
+    const glass = await firstChip.evaluate((el) => getComputedStyle(el).backdropFilter);
     expect(glass).toContain('blur');
     await page.keyboard.press('Escape');
     await expect(settings).toHaveCount(0);
@@ -272,6 +276,21 @@ test.describe('CircuitLab desktop', () => {
     await expect(page.locator('.liquid-ripple')).toHaveCount(1);
     await page.mouse.up();
     await expect(page.locator('.liquid-ripple')).toHaveCount(0, { timeout: 2500 });
+  });
+
+  test('shows external and internal source power in real time', async ({ page }) => {
+    await loadExperiment(page, 'Internal resistance');
+    const cell = await canvasPoint(page, 140, 260);
+    await page.mouse.click(cell.x, cell.y);
+    const rail = page.locator('.rail-body');
+    await expect(rail.getByText('External circuit power')).toBeVisible();
+    await expect(rail.getByText('Internal-resistance power')).toBeVisible();
+    await expect(rail.getByText('10.00 W').first()).toBeVisible();
+    await expect(rail.getByText('2.00 W').first()).toBeVisible();
+    await expect(rail.getByText(/P_EMF = P_ext \+ P_r/)).toBeVisible();
+    await page.locator('.bottom-dock').getByRole('tab', { name: 'Measurements' }).click();
+    await expect(page.locator('.bottom-dock').getByText('External power')).toBeVisible();
+    await expect(page.locator('.bottom-dock').getByText('Internal power')).toBeVisible();
   });
 
   test('shows the internal-resistance fit and the RC time constant', async ({ page }) => {

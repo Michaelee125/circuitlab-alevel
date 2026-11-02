@@ -342,9 +342,15 @@ export function Measurements() {
               </div>
             </div>
             <div className="meter-card">
-              <div className="meter-card-label">{t(language, 'measure.totalP')}</div>
+              <div className="meter-card-label">{t(language, 'measure.externalPower')}</div>
               <div className="meter-card-value">
-                {formatQuantity(Math.abs(solution.totalPowerDelivered), 'power')}
+                {formatQuantity(Math.abs(solution.components[source.id].deliveredPower ?? 0), 'power')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'measure.internalPower')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(Math.abs(solution.components[source.id].internalPower ?? 0), 'power')}
               </div>
             </div>
           </>

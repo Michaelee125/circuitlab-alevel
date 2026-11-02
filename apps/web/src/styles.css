@@ -387,7 +387,7 @@ kbd {
 }
 
 .value-key {
-  width: 8px;
+  width: 13px;
   opacity: 0.75;
 }
 
@@ -401,6 +401,14 @@ kbd {
 
 .row-r {
   color: #ff9f0a;
+}
+
+.row-p {
+  color: #ff6b8a;
+}
+
+.row-pr {
+  color: #bf5af2;
 }
 
 .value-chip.is-compact {
@@ -419,7 +427,7 @@ kbd {
 }
 
 .value-chip.is-compact .value-key {
-  width: 6px;
+  width: 9px;
 }
 
 .value-chip.is-compact .value-row {
@@ -448,6 +456,14 @@ kbd {
 
 .light .row-r {
   color: #c93400;
+}
+
+.light .row-p {
+  color: #d70055;
+}
+
+.light .row-pr {
+  color: #8944ab;
 }
 
 .stage-overlay-top {

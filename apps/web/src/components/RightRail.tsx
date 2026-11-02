@@ -448,14 +448,28 @@ export function Inspector() {
               <div className="meter-card-value">{formatQuantity(reading.currentMagnitude, 'current')}</div>
             </div>
             <div className="meter-card">
-              <div className="meter-card-label">{t(language, 'measure.power')}</div>
-              <div className="meter-card-value">{formatQuantity(Math.abs(reading.power), 'power')}</div>
+              <div className="meter-card-label">{t(language, 'properties.externalPower')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(Math.abs(reading.deliveredPower ?? 0), 'power')}
+              </div>
+            </div>
+            <div className="meter-card">
+              <div className="meter-card-label">{t(language, 'properties.internalPower')}</div>
+              <div className="meter-card-value">
+                {formatQuantity(Math.abs(reading.internalPower ?? 0), 'power')}
+              </div>
             </div>
           </div>
           <div className="field-hint">
             Terminal p.d. = EMF − I·r = {formatQuantity(comp.params.emf ?? 0, 'voltage')} −{' '}
             {formatQuantity(reading.currentMagnitude, 'current')} ×{' '}
             {formatQuantity(internalR, 'resistance')}
+          </div>
+          <div className="field-hint">
+            {t(language, 'properties.powerBalance')}:{' '}
+            {formatQuantity((comp.params.emf ?? 0) * reading.currentMagnitude, 'power')} ={' '}
+            {formatQuantity(Math.abs(reading.deliveredPower ?? 0), 'power')} +{' '}
+            {formatQuantity(Math.abs(reading.internalPower ?? 0), 'power')}
           </div>
         </>
       )}

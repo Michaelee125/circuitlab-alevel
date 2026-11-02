@@ -18,10 +18,10 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing tests: **68 passed**
-- Desktop e2e: **19 passed** (`desktop-chromium`, includes the smoke test)
+- Unit/physics/reasoning/teaching/routing tests: **69 passed**
+- Desktop e2e: **20 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **40 passed**, 60 intentionally skipped
+- Total Playwright: **41 passed**, 63 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -109,6 +109,13 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 - Schematic and realistic renderers draw the three-terminal symbol and wiper; the inspector adds a wiper-position slider (0 % at B, 100 % at A) and potential-divider output cards with the formula. The reasoning engine explains wiper changes with section resistances and `V_WB = (R_WB/R_total)·V_AB`.
 - Router fix: endpoint component bodies are now avoided as well, so a wiper wire cannot run back through its own rheostat.
 - Tests: potential-divider, two-wire, full-track and JSON round-trip cases; a reasoning test; an e2e library/inspector test. 68 unit / 40 Playwright checks.
+
+## Power readouts (thirteenth review)
+
+- Every Liquid Glass value card now carries a fourth row: P. Passives show dissipated power; the source card shows the external circuit power (terminal p.d. × current) plus `Pr = I²r`, the power lost in the internal resistance.
+- The source inspector gained external and internal-resistance power cards and the balance line `P_EMF = P_ext + P_r`; the Measurements dock shows the same two powers in real time.
+- Fixed `totalPowerDelivered`/`totalPowerDissipated`: the solver iterated `Object.values` over a Map (always empty), so these totals were reported as 0. They now use `readings.values()`; the tests assert 22 W external and 22 W dissipated for a 12 V, 0.5 Ω source driving 5.5 Ω.
+- Tests: source-power physics test, source-power inspector/measurements e2e and value-card row assertions. 69 unit / 41 Playwright checks.
 
 ## Known limitations
 
