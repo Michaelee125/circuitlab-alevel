@@ -23,6 +23,7 @@ import {
   type RightTab,
 } from '../store';
 import { LT } from './Localized';
+import { registerExplainClick } from '../easterEgg';
 
 const LAW_LABEL: Record<PhysicsLaw, { en: string; zh: string }> = {
   'ohms-law': { en: 'V = IR', zh: 'U = IR' },
@@ -902,7 +903,10 @@ export function RightRail() {
             role="tab"
             aria-selected={active === tab.id}
             className={`rail-tab ${active === tab.id ? 'is-active' : ''}`}
-            onClick={() => setRightTab(tab.id)}
+            onClick={() => {
+              if (tab.id === 'explain') registerExplainClick();
+              setRightTab(tab.id);
+            }}
           >
             <Icon name={tab.icon} size={14} />
             {tab.label}

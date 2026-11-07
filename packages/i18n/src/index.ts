@@ -38,6 +38,7 @@ const D: Record<string, Entry> = {
   'action.zoomIn': ['Zoom in', '放大'],
   'action.zoomOut': ['Zoom out', '缩小'],
   'action.clear': ['Clear circuit', '清空电路'],
+  'toast.cleared': ['Circuit cleared', '电路已清空'],
   'action.close': ['Close', '关闭'],
   'action.cancel': ['Cancel', '取消'],
   'action.confirm': ['Confirm', '确认'],

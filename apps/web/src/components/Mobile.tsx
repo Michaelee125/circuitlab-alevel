@@ -7,6 +7,7 @@ import { MobileTopBar } from './TopBar';
 import { Palette } from './Palette';
 import { Inspector, ExplainPanel, ComparePanel, GuidedPanel } from './RightRail';
 import { ChartView, Measurements, ExperimentActions } from './BottomDock';
+import { registerExplainClick } from '../easterEgg';
 
 const SHEET_TITLES: Record<string, string> = {
   palette: 'panel.components',
@@ -86,7 +87,10 @@ export function MobileShell() {
           <button
             key={tab.id}
             className={`mobile-tab ${sheet === tab.id ? 'is-active' : ''}`}
-            onClick={() => setSheet(sheet === tab.id ? 'none' : (tab.id as typeof sheet))}
+            onClick={() => {
+              if (tab.id === 'explain') registerExplainClick();
+              setSheet(sheet === tab.id ? 'none' : (tab.id as typeof sheet));
+            }}
           >
             <Icon name={tab.icon} size={19} />
             <span>{tab.label}</span>
@@ -99,7 +103,12 @@ export function MobileShell() {
           <div className="sheet" onClick={(event) => event.stopPropagation()}>
             <div className="sheet-handle" />
             <div className="sheet-head">
-              <span style={{ fontSize: 13, fontWeight: 650 }}>{t(language, titleKey)}</span>
+              <span
+                style={{ fontSize: 13, fontWeight: 650 }}
+                onClick={sheet === 'explain' ? registerExplainClick : undefined}
+              >
+                {t(language, titleKey)}
+              </span>
               <IconButton icon="x" label={t(language, 'action.close')} size={16} onClick={() => setSheet('none')} />
             </div>
             <div className="sheet-body">

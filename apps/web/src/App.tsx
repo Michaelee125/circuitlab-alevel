@@ -8,6 +8,7 @@ import { CircuitCanvas } from './components/CircuitCanvas';
 import { BottomDock } from './components/BottomDock';
 import { RightRail } from './components/RightRail';
 import { MobileShell } from './components/Mobile';
+import { ExplainEasterEgg } from './components/ExplainEasterEgg';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useCircuitStore, useSolution } from './store';
 
@@ -69,6 +70,7 @@ export default function App() {
         </div>
       )}
       <Dialogs />
+      <ExplainEasterEgg />
 
       {toast && (
         <div className="toast" role="status" key={toast.id}>

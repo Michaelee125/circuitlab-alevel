@@ -259,7 +259,9 @@ export function TopBar() {
   const setBottomOpen = useCircuitStore((s) => s.setBottomOpen);
   const selectionId = useCircuitStore((s) => s.selectionId);
   const doc = useCircuitStore((s) => s.doc);
+  const clearAll = useCircuitStore((s) => s.clearAll);
   const selection = doc.components.find((c) => c.id === selectionId);
+  const canClear = doc.components.length > 0 || doc.wires.length > 0;
 
   return (
     <header className="topbar">
@@ -285,6 +287,13 @@ export function TopBar() {
       <div className="topbar-spacer" />
       <LanguagePicker />
       <div className="topbar-group">
+        <IconButton
+          icon="clear-all"
+          label={t(language, 'action.clear')}
+          onClick={clearAll}
+          disabled={!canClear}
+          className="clear-circuit-btn"
+        />
         <ThemeToggle />
         <SettingsMenu />
         <IconButton
@@ -311,6 +320,9 @@ export function MobileTopBar() {
   const setTheme = useCircuitStore((s) => s.setTheme);
   const experimentId = useCircuitStore((s) => s.experimentId);
   const experiment = experimentId ? getExperiment(experimentId) : null;
+  const doc = useCircuitStore((s) => s.doc);
+  const clearAll = useCircuitStore((s) => s.clearAll);
+  const canClear = doc.components.length > 0 || doc.wires.length > 0;
 
   return (
     <header className="mobile-topbar">
@@ -334,6 +346,14 @@ export function MobileTopBar() {
           label={t(language, 'experiments.library')}
           size={16}
           onClick={() => setSheet('experiments')}
+        />
+        <IconButton
+          icon="clear-all"
+          label={t(language, 'action.clear')}
+          size={16}
+          onClick={clearAll}
+          disabled={!canClear}
+          className="clear-circuit-btn"
         />
         <IconButton
           icon={theme === 'dark' ? 'moon' : 'sun'}

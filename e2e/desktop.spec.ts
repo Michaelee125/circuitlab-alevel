@@ -66,6 +66,27 @@ test.describe('CircuitLab desktop', () => {
     await expect(s).toHaveAttribute('data-highlight', /\w+/);
   });
 
+  test('clears the whole circuit from the top bar and restores it with undo', async ({ page }) => {
+    await loadExperiment(page, 'LDR circuit');
+    const s = state(page);
+    await expect(s).toHaveAttribute('data-components', '5');
+    await page.getByRole('button', { name: 'Clear circuit' }).click();
+    await expect(s).toHaveAttribute('data-components', '0');
+    await expect(page.getByText('Circuit cleared')).toBeVisible();
+    await page.getByRole('button', { name: 'Undo' }).first().click();
+    await expect(s).toHaveAttribute('data-components', '5');
+  });
+
+  test('shows the thank-you easter egg after eight quick Explain clicks', async ({ page }) => {
+    const explain = page.getByRole('tab', { name: 'Explain' });
+    for (let i = 0; i < 8; i += 1) await explain.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Thank you for using circuitlab!');
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    await expect(dialog).toBeHidden();
+  });
+
   test('gives the parallel explanation, not the series one', async ({ page }) => {
     await loadExperiment(page, 'LDR in parallel');
     await page.getByRole('button', { name: /Increase light/i }).first().click();

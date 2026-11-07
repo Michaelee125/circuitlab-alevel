@@ -57,6 +57,8 @@ site.
 | File workflows | ✅ export JSON, valid import, invalid-JSON toast, share fallback, save/load and IndexedDB reload exercised during the QA pass |
 | Preset theory audit | ✅ all 11 experiments: expected statuses, textbook initial readings, every effective action, inverse sensor actions, full negative lamp I–V sweep, internal-resistance gradient −0.500 Ω / intercept 6.000 V, RC τ = 4.70 s and 63 %/37 % points |
 | Parallel wiring | ✅ parallel and LDR-parallel presets use a shared-rail ladder with the source/main ammeter on the bottom rail and R1/R2/V1 or LDR+A1/R1/V1 branches between the two vertical rails; every preset route starts and ends exactly on its terminals |
+| One-click clear | ✅ the top-bar clear-all button empties every component and wire, resets the experiment state and panels, shows a toast, and can be undone; disabled on an already-empty circuit; desktop e2e |
+| Explain easter egg | ✅ eight Explain clicks within 3 seconds open the "Thank you for using circuitlab!" dialog (window counter unit-tested; desktop e2e; also reachable on mobile through the Explain sheet title) |
 | Explanation facts | ✅ internal-resistance total includes the 0.500 Ω source resistance (3.00 → 1.00 Ω), falling EMF reads "smaller", non-ideal source rules fall back to the general rule, and guided answers come from the verified directions |
 | Phone toolbar | ✅ every control visible at 320–412 px, nothing clipped by the stage |
 | Phone top bar | ✅ grouped icon cluster, styled language picker, theme toggle, no page overflow |
@@ -90,12 +92,12 @@ site.
 
 | Suite | Result |
 | --- | --- |
-| Vitest (physics, transients, reasoning, teaching, routing, flow, experiments) | 94 / 94 passed |
-| Playwright desktop project | 21 / 21 passed |
+| Vitest (physics, transients, reasoning, teaching, routing, flow, experiments, easter egg) | 97 / 97 passed |
+| Playwright desktop project | 23 / 23 passed |
 | Playwright iPhone 13 | 7 / 7 passed |
 | Playwright Pixel 7 | 7 / 7 passed |
 | Playwright iPad (gen 7) | 7 / 7 passed |
-| Total e2e | 42 passed, 66 intentionally skipped (viewport-specific) |
+| Total e2e | 44 passed, 72 intentionally skipped (viewport-specific) |
 
 Run the live smoke test any time with:
 

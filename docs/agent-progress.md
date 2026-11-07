@@ -1,6 +1,6 @@
 # Agent progress
 
-Last updated: 2026-11-01 (Phase 1 build + review fixes)
+Last updated: 2026-11-07 (Phase 1 build + review fixes)
 
 ## Status
 
@@ -18,10 +18,10 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing/flow/experiments tests: **94 passed**
-- Desktop e2e: **21 passed** (`desktop-chromium`, includes the smoke test)
+- Unit/physics/reasoning/teaching/routing/flow/experiments tests: **97 passed**
+- Desktop e2e: **23 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
-- Total Playwright: **42 passed**, 66 intentionally skipped
+- Total Playwright: **44 passed**, 72 intentionally skipped
 - TypeScript: strict, no errors
 - Production build: passing (Pixi + ECharts split into chunks)
 - Live site verified: HTTP 200, assets 200, WebGL + LDR reasoning, 0 console errors
@@ -180,6 +180,13 @@ The two parallel presets were electrically correct but drawn as a perimeter ring
 - The rails are built from explicit short wires chained through the branch terminals, so each junction is a real terminal node rather than a crossing. The branch components (including the narrower meters) connect with short jogs; all routes start and end exactly on their terminals.
 - The desktop fit now also measures the floating bottom hint/zoom row, so the source and A1 labels are no longer clipped by the canvas edge.
 - Tests: ladder positions and shared links for both presets, route anchors for all 11 presets, all routes free of component cuts. 94 unit / 42 Playwright checks remain green; screenshots updated.
+
+## Clear all and the Explain easter egg (twentieth review)
+
+- **One-click clear**: a trash-with-spark button in the top bar (desktop group and the phone action pill) calls a new `clearAll` store action. It empties components/wires, resets the experiment id, recorded points, view and panels, then shows "Circuit cleared". The old document is pushed onto the history stack, so the toolbar Undo (or ⌘Z) restores the whole circuit. The button is disabled on an empty canvas.
+- **Explain easter egg**: a small pure tracker records Explain clicks. Eight clicks within 3 000 ms open a glass dialog with the exact text "Thank you for using circuitlab!". Close/X, Escape and backdrop dismiss it. The tracker is unit-tested for the 8-in-3 s window, the spread-out negative case and the reset after firing; a desktop e2e clicks the Explain tab eight times and asserts the dialog.
+- Both the desktop rail tab and the phone bottom tab feed the counter; on the phone the Explain sheet title is also a counter target, because the first tab tap opens the sheet over the tab bar.
+- Counts: **97 unit / 44 Playwright** checks green; screenshots added.
 
 ## Known limitations
 

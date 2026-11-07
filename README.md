@@ -87,6 +87,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Manual wire adjustment: drag a wire to reshape it, handles on movable segments, reset to automatic | ✅ |
 | Clean orthogonal auto-routing: terminal-port search, component-body avoidance, overlap/crossing penalties, short wires routed first | ✅ |
 | One-tap Auto-arrange (desktop and mobile): a series loop reflows to one row with shunt voltmeters underneath | ✅ |
+| One-click Clear circuit in the top bar (desktop and phone): empties the canvas, closes panels, shows a toast and can be undone | ✅ |
 | Parallel presets drawn as a shared-rail ladder: source/main-branch ammeter on the bottom rail, two vertical rails, the R1/R2/V1 branches between them, and the LDR+ammeter and voltmeter branches clearly placed | ✅ |
 | Current animation driven by per-terminal currents: branch wires use their branch current and ideal-voltmeter leads stay still | ✅ |
 | Two distinct variable components: 2-terminal adjustable resistor and 3-terminal sliding rheostat with a wiper divider | ✅ |
@@ -136,7 +137,7 @@ Useful commands:
 
 ```bash
 pnpm typecheck    # strict TypeScript check of every package
-pnpm test         # 47 unit / physics / reasoning tests (Vitest)
+pnpm test         # 97 unit / physics / reasoning tests (Vitest)
 pnpm build        # production build of apps/web
 pnpm preview      # preview the production build
 pnpm test:e2e     # Playwright suite (desktop + iPhone + Android + iPad)

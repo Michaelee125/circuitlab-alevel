@@ -180,6 +180,7 @@ interface CircuitState {
   redo: () => void;
   autoArrange: () => void;
   clearCircuit: () => void;
+  clearAll: () => void;
 
   setView: (view: ViewportState) => void;
   panBy: (dx: number, dy: number) => void;
@@ -548,6 +549,12 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       recorded: [],
       view: { x: 80, y: 80, zoom: 1 },
     });
+  },
+
+  clearAll: () => {
+    get().clearCircuit();
+    set({ bottomOpen: false, mobileSheet: 'none', rightTab: 'inspector' });
+    get().toastMessage(t(get().language, 'toast.cleared'));
   },
 
   setView: (view) => set({ view }),

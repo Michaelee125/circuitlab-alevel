@@ -9,6 +9,7 @@ export type IconName =
   | 'plus'
   | 'minus'
   | 'trash'
+  | 'clear-all'
   | 'rotate'
   | 'undo'
   | 'redo'
@@ -49,6 +50,14 @@ const ICONS: Record<IconName, string[]> = {
   plus: ['M12 5v14', 'M5 12h14'],
   minus: ['M5 12h14'],
   trash: ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v5', 'M14 11v5'],
+  'clear-all': [
+    'M3 6h18',
+    'M8 6V4h8v2',
+    'M19 6l-1 14H6L5 6',
+    'M10 11v5',
+    'M14 11v5',
+    'M18 2l.7 1.6L20.3 4.3l-1.6.7L18 6.6l-.7-1.6-1.6-.7 1.6-.7L18 2z',
+  ],
   rotate: ['M21 12a9 9 0 1 1-3-6.7', 'M21 3v6h-6'],
   undo: ['M9 14L4 9l5-5', 'M4 9h11a5 5 0 0 1 0 10H9'],
   redo: ['M15 14l5-5-5-5', 'M20 9H9a5 5 0 0 0 0 10h6'],
