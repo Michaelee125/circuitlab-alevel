@@ -176,20 +176,25 @@ const parallelCircuit = (): CircuitDocument =>
   buildExperimentDoc(
     'Parallel circuit',
     [
-      { kind: 'cell', label: 'E1', x: 140, y: 300, params: { emf: 6 } },
-      { kind: 'resistor', label: 'R1', x: 520, y: 180, params: { resistance: 10 } },
-      { kind: 'resistor', label: 'R2', x: 520, y: 420, params: { resistance: 20 } },
-      { kind: 'ammeter', label: 'A1', x: 320, y: 300 },
-      { kind: 'voltmeter', label: 'V1', x: 760, y: 180 },
+      // Ladder: source and main-branch ammeter on the bottom rail, two
+      // vertical rails, and the parallel branches between them.
+      { kind: 'cell', label: 'E1', x: 480, y: 600, params: { emf: 6 } },
+      { kind: 'resistor', label: 'R1', x: 420, y: 200, params: { resistance: 10 } },
+      { kind: 'resistor', label: 'R2', x: 420, y: 400, params: { resistance: 20 } },
+      { kind: 'ammeter', label: 'A1', x: 700, y: 600 },
+      { kind: 'voltmeter', label: 'V1', x: 420, y: 320 },
     ],
     [
+      // Left rail: source negative -> R2 -> V1 -> R1.
+      ['E1', 'neg', 'R2', 'a'],
+      ['R2', 'a', 'V1', 'a'],
+      ['V1', 'a', 'R1', 'a'],
+      // Main branch: source positive -> ammeter -> right rail.
       ['E1', 'pos', 'A1', 'a'],
-      ['A1', 'b', 'R1', 'a'],
-      ['A1', 'b', 'R2', 'a'],
-      ['R1', 'b', 'E1', 'neg'],
-      ['R2', 'b', 'E1', 'neg'],
-      ['R1', 'a', 'V1', 'a'],
-      ['R1', 'b', 'V1', 'b'],
+      ['A1', 'b', 'R2', 'b'],
+      // Right rail: R2 -> V1 -> R1.
+      ['R2', 'b', 'V1', 'b'],
+      ['V1', 'b', 'R1', 'b'],
     ],
   );
 
@@ -321,25 +326,31 @@ const ldrParallelCircuit = (): CircuitDocument =>
   buildExperimentDoc(
     'LDR parallel circuit',
     [
-      { kind: 'cell', label: 'E1', x: 120, y: 300, params: { emf: 12 } },
+      // Ladder: source at the bottom, vertical rails and three parallel
+      // branches (LDR + ammeter, R1 and the voltmeter).
+      { kind: 'cell', label: 'E1', x: 480, y: 600, params: { emf: 12 } },
       {
         kind: 'ldr',
         label: 'LDR1',
         x: 420,
-        y: 180,
+        y: 200,
         params: { ...LDR_BASE, illuminance: ldrIlluminanceForResistance(8, LDR_BASE) },
       },
-      { kind: 'ammeter', label: 'A1', x: 700, y: 180 },
-      { kind: 'resistor', label: 'R1', x: 420, y: 420, params: { resistance: 4 } },
-      { kind: 'voltmeter', label: 'V1', x: 700, y: 420 },
+      { kind: 'ammeter', label: 'A1', x: 660, y: 200 },
+      { kind: 'resistor', label: 'R1', x: 420, y: 400, params: { resistance: 4 } },
+      { kind: 'voltmeter', label: 'V1', x: 420, y: 520 },
     ],
     [
-      ['E1', 'pos', 'LDR1', 'a'],
+      // Left rail: source negative -> V1 -> R1 -> LDR.
+      ['E1', 'neg', 'V1', 'a'],
+      ['V1', 'a', 'R1', 'a'],
+      ['R1', 'a', 'LDR1', 'a'],
+      // LDR + ammeter branch.
       ['LDR1', 'b', 'A1', 'a'],
-      ['A1', 'b', 'E1', 'neg'],
-      ['E1', 'pos', 'R1', 'a'],
-      ['R1', 'b', 'E1', 'neg'],
-      ['R1', 'a', 'V1', 'a'],
+      // Source positive -> ammeter -> right rail.
+      ['E1', 'pos', 'A1', 'b'],
+      // Right rail: A1 -> R1 -> V1.
+      ['A1', 'b', 'R1', 'b'],
       ['R1', 'b', 'V1', 'b'],
     ],
   );

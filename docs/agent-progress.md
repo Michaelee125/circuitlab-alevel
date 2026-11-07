@@ -18,7 +18,7 @@ Last updated: 2026-11-01 (Phase 1 build + review fixes)
 | GitHub Pages deployment | ✅ live from `gh-pages`, verified |
 | WeChat mini-program | 🟡 scaffold + adapter layer only (Phase 2, not published) |
 
-- Unit/physics/reasoning/teaching/routing/flow/experiments tests: **92 passed**
+- Unit/physics/reasoning/teaching/routing/flow/experiments tests: **94 passed**
 - Desktop e2e: **21 passed** (`desktop-chromium`, includes the smoke test)
 - Mobile e2e: iPhone 13 **7 passed**, Pixel 7 **7 passed**, iPad **7 passed**
 - Total Playwright: **42 passed**, 66 intentionally skipped
@@ -169,6 +169,17 @@ The mobile screenshot showed the light-theme top controls, toolbar and tab dock 
 - The light theme additionally sets **`backdrop-filter: none`** so the canvas grid and drawing are not hazed; a 0.5 px border, a specular top edge and a soft shadow are the only surfaces. The dark theme keeps a 6 px blur for its smoked glass, still with a transparent fill.
 - Active states use a transparent fill plus an accent ring (segmented/values), an accent top bar (active dock tab) and accent text, so selection is still visible without a solid background.
 - Verified in a 3× crop: the grid lines run continuously through the dock and toolbar. No layout or hit-area changes; 92 unit / 42 Playwright checks remain green.
+
+## Parallel wiring ladder (nineteenth review)
+
+The two parallel presets were electrically correct but drawn as a perimeter ring: source on the left, one branch above and one below, and the return wires looping right around the whole circuit. Students could not see which terminals were shared nodes.
+
+- Both presets are now a **shared-rail ladder**. The source (and the main-branch ammeter in the resistor parallel) sits on the bottom rail; two vertical rails carry the two nodes up to the branches; the branches sit between them:
+  - Parallel resistors: R1 at the top, V1 in the middle and R2 at the bottom, each between the same rails; A1 in the main branch.
+  - LDR parallel: LDR + A1 form the top branch; R1 is below it; V1 sits below R1; all three branches share the rails.
+- The rails are built from explicit short wires chained through the branch terminals, so each junction is a real terminal node rather than a crossing. The branch components (including the narrower meters) connect with short jogs; all routes start and end exactly on their terminals.
+- The desktop fit now also measures the floating bottom hint/zoom row, so the source and A1 labels are no longer clipped by the canvas edge.
+- Tests: ladder positions and shared links for both presets, route anchors for all 11 presets, all routes free of component cuts. 94 unit / 42 Playwright checks remain green; screenshots updated.
 
 ## Known limitations
 

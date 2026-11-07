@@ -64,9 +64,17 @@ export function CircuitCanvas({ compact = false, dockOpen = false }: Props) {
     const host = hostRef.current?.getBoundingClientRect();
     const toolbar = toolbarRef.current?.getBoundingClientRect();
     const tabbar = document.querySelector('.mobile-tabbar')?.getBoundingClientRect();
+    const bottomOverlay = document.querySelector('.stage-overlay-bottom')?.getBoundingClientRect();
     const top = host && toolbar ? Math.max(0, toolbar.bottom - host.top + 12) : compact ? 118 : 0;
-    const bottom =
-      compact && host && tabbar ? Math.max(0, host.bottom - tabbar.top + 12) : 0;
+    // Keep the circuit and its labels above the floating hint/zoom row (and the
+    // mobile tab bar below it).
+    const bottom = host
+      ? Math.max(
+          0,
+          bottomOverlay ? host.bottom - bottomOverlay.top + 12 : 0,
+          compact && tabbar ? host.bottom - tabbar.top + 12 : 0,
+        )
+      : 0;
     useCircuitStore.getState().setCanvasInsets({ top, bottom });
   }, [compact]);
 

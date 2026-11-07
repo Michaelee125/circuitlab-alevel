@@ -46,6 +46,9 @@ circuit — not from keyword matching.
 | Messy two-row layout | After one tap on Auto-arrange |
 | --- | --- |
 | ![A two-row LDR circuit with long detours](docs/images/routing-before.png) | ![The same circuit tidied into one row with the voltmeter underneath](docs/images/tidy-layout.png) |
+| Parallel ladder | LDR parallel ladder |
+| --- | --- |
+| ![Parallel resistors between two shared rails, main ammeter at the bottom](docs/images/parallel-ladder.png) | ![LDR plus ammeter branch and resistor/voltmeter branches between shared rails](docs/images/ldr-parallel-ladder.png) |
 
 ## Why this is not just an animation
 
@@ -84,6 +87,7 @@ stays at the supply voltage and only the LDR branch current changes.
 | Manual wire adjustment: drag a wire to reshape it, handles on movable segments, reset to automatic | ✅ |
 | Clean orthogonal auto-routing: terminal-port search, component-body avoidance, overlap/crossing penalties, short wires routed first | ✅ |
 | One-tap Auto-arrange (desktop and mobile): a series loop reflows to one row with shunt voltmeters underneath | ✅ |
+| Parallel presets drawn as a shared-rail ladder: source/main-branch ammeter on the bottom rail, two vertical rails, the R1/R2/V1 branches between them, and the LDR+ammeter and voltmeter branches clearly placed | ✅ |
 | Current animation driven by per-terminal currents: branch wires use their branch current and ideal-voltmeter leads stay still | ✅ |
 | Two distinct variable components: 2-terminal adjustable resistor and 3-terminal sliding rheostat with a wiper divider | ✅ |
 | Real-time source power breakdown: terminal/external power and I²r internal power, with the `P_EMF = P_ext + P_r` balance | ✅ |

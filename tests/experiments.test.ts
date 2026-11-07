@@ -14,6 +14,7 @@ import {
   internalResistanceDataset,
 } from '@circuitlab/teaching-engine';
 import type { CircuitDocument } from '@circuitlab/circuit-core';
+import { getTerminalDef, getWireRoutes, terminalWorld } from '@circuitlab/circuit-core';
 
 const near = (actual: number | undefined, expected: number, digits = 2) =>
   expect(actual ?? Number.NaN).toBeCloseTo(expected, digits);
@@ -194,6 +195,63 @@ describe('preset experiments', () => {
     near(read(thermistorHot.after, thermistorHot.afterSolution, 'R1').voltageMagnitude, 10.34, 1);
     const thermistorCool = act('thermistor-circuit', 'cool', thermistorHot.after);
     near(read(thermistorCool.after, thermistorCool.afterSolution, 'R1').voltageMagnitude, 6);
+  });
+
+  it('lays out the parallel presets as a shared-rail ladder', () => {
+    const parallel = getExperiment('parallel-circuit')!.build();
+    const p = Object.fromEntries(parallel.components.map((c) => [c.label ?? '', c]));
+    expect(p.E1.y).toBeGreaterThan(p.R1.y);
+    expect(p.R1.x).toBe(p.R2.x);
+    expect(p.V1.x).toBe(p.R1.x);
+    expect(p.A1.y).toBe(p.E1.y);
+    expect(p.A1.x).toBeGreaterThan(p.E1.x);
+    const hasLink = (doc: CircuitDocument, a: string, b: string) => {
+      const aComp = doc.components.find((c) => c.label === a);
+      const bComp = doc.components.find((c) => c.label === b);
+      return doc.wires.some(
+        (wire) =>
+          (wire.from.componentId === aComp?.id && wire.to.componentId === bComp?.id) ||
+          (wire.from.componentId === bComp?.id && wire.to.componentId === aComp?.id),
+      );
+    };
+    // Shared rails: every branch terminal is chained to the same two nodes.
+    expect(hasLink(parallel, 'E1', 'R2')).toBe(true);
+    expect(hasLink(parallel, 'R2', 'V1')).toBe(true);
+    expect(hasLink(parallel, 'V1', 'R1')).toBe(true);
+    expect(hasLink(parallel, 'A1', 'R2')).toBe(true);
+
+    const ldr = getExperiment('ldr-parallel')!.build();
+    const l = Object.fromEntries(ldr.components.map((c) => [c.label ?? '', c]));
+    expect(l.E1.y).toBeGreaterThan(l.R1.y);
+    expect(l.LDR1.y).toBe(l.A1.y);
+    expect(l.LDR1.x).toBe(l.R1.x);
+    expect(l.V1.x).toBe(l.R1.x);
+    expect(hasLink(ldr, 'E1', 'V1')).toBe(true);
+    expect(hasLink(ldr, 'V1', 'R1')).toBe(true);
+    expect(hasLink(ldr, 'R1', 'LDR1')).toBe(true);
+    expect(hasLink(ldr, 'A1', 'R1')).toBe(true);
+  });
+
+  it('anchors every preset route on its two terminals', () => {
+    for (const experiment of EXPERIMENTS) {
+      const doc = experiment.build();
+      const routes = getWireRoutes(doc);
+      for (const wire of doc.wires) {
+        const fromComp = doc.components.find((c) => c.id === wire.from.componentId);
+        const toComp = doc.components.find((c) => c.id === wire.to.componentId);
+        const fromTerm = fromComp ? getTerminalDef(fromComp, wire.from.terminalId) : undefined;
+        const toTerm = toComp ? getTerminalDef(toComp, wire.to.terminalId) : undefined;
+        expect(fromComp && toComp && fromTerm && toTerm).toBeTruthy();
+        const from = terminalWorld(fromComp!, fromTerm!);
+        const to = terminalWorld(toComp!, toTerm!);
+        const route = routes[wire.id] ?? [];
+        expect(route.length).toBeGreaterThan(1);
+        expect(route[0].x).toBeCloseTo(from.x, 3);
+        expect(route[0].y).toBeCloseTo(from.y, 3);
+        expect(route[route.length - 1].x).toBeCloseTo(to.x, 3);
+        expect(route[route.length - 1].y).toBeCloseTo(to.y, 3);
+      }
+    }
   });
 
   it('applies the internal-resistance rheostat actions', () => {
